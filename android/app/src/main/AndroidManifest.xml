@@ -26,6 +26,13 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Keep a launcher intent filter in the base manifest so flutter_tools
+                 can resolve the app entrypoint. Variant manifests remove it during
+                 manifest merge to preserve the alias-based launcher setup. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
         <activity-alias
             android:name=".LauncherDefault"
