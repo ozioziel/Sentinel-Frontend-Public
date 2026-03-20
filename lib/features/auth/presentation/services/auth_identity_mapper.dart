@@ -55,24 +55,15 @@ class AuthIdentityMapper {
         .toList();
 
     if (parts.isEmpty) {
-      return const NameParts(
-        firstName: 'Usuaria',
-        lastName: 'Sentinel',
-      );
+      return const NameParts(firstName: 'Usuaria', lastName: 'Sentinel');
     }
 
     if (parts.length == 1) {
-      return NameParts(
-        firstName: parts.first,
-        lastName: 'Sin apellido',
-      );
+      return NameParts(firstName: parts.first, lastName: 'Sin apellido');
     }
 
     if (parts.length == 2) {
-      return NameParts(
-        firstName: parts.first,
-        lastName: parts.last,
-      );
+      return NameParts(firstName: parts.first, lastName: parts.last);
     }
 
     return NameParts(
@@ -103,5 +94,12 @@ class AuthIdentityMapper {
     }
 
     return trimmedAddress;
+  }
+
+  static String formatBirthDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 }

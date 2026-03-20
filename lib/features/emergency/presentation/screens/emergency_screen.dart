@@ -23,7 +23,9 @@ class EmergencyScreen extends StatefulWidget {
 class _EmergencyScreenState extends State<EmergencyScreen> {
   bool _isRecording = false;
   bool _isSendingAlert = false;
+  bool _isProcessingEvidence = false;
   String _captureStatus = 'Grabando video, audio y ubicacion...';
+  String? _processingStatus;
   String? _activeLocationUrl;
   String? _activeIncidentId;
   Future<EmergencyIncidentResult>? _incidentCreationFuture;
@@ -67,46 +69,76 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   }
 
   Future<void> _deactivateAlert() async {
-    final stopResult = await _captureService.stopEmergencyCapture();
-    final locationUrl = stopResult.mapsUrl ?? _activeLocationUrl;
+    if (_isProcessingEvidence) return;
+
+    setState(() {
+      _isProcessingEvidence = true;
+      _processingStatus = 'Guardando video y cerrando la alerta...';
+    });
+
+    EmergencyCaptureStopResult? stopResult;
+    String? locationUrl;
     final pendingIncidentFuture = _incidentCreationFuture;
+    final previousLocationUrl = _activeLocationUrl;
     _activeLocationUrl = null;
     _incidentCreationFuture = null;
 
-    if (!mounted) return;
-    setState(() => _isRecording = false);
+    try {
+      stopResult = await _captureService.stopEmergencyCapture();
+      locationUrl = stopResult.mapsUrl ?? previousLocationUrl;
 
-    for (final issue in stopResult.issues) {
-      _showSnackBar(issue);
-    }
+      if (!mounted) return;
+      setState(() => _isRecording = false);
 
-    final incidentId = await _resolveIncidentId(
-      locationUrl: locationUrl,
-      pendingIncidentFuture: pendingIncidentFuture,
-    );
+      for (final issue in stopResult.issues) {
+        _showSnackBar(issue);
+      }
 
-    if (incidentId != null) {
-      final uploadResult = await _backendService.uploadEvidence(
-        incidentId: incidentId,
+      setState(() {
+        _processingStatus = 'Preparando evidencia para compartir...';
+      });
+
+      final shareResult = await _alertService.shareEvidence(
         stopResult: stopResult,
         locationUrl: locationUrl,
       );
 
-      if (mounted && uploadResult.message != null) {
-        _showSnackBar(uploadResult.message!);
+      if (mounted && shareResult.message != null) {
+        _showSnackBar(shareResult.message!);
+      }
+
+      final hasEvidence = stopResult.attachmentPaths.isNotEmpty;
+      if (hasEvidence) {
+        setState(() {
+          _processingStatus = 'Subiendo evidencia al servidor...';
+        });
+      }
+
+      final incidentId = await _resolveIncidentId(
+        locationUrl: locationUrl,
+        pendingIncidentFuture: pendingIncidentFuture,
+      );
+
+      if (incidentId != null && hasEvidence) {
+        final uploadResult = await _backendService.uploadEvidence(
+          incidentId: incidentId,
+          stopResult: stopResult,
+          locationUrl: locationUrl,
+        );
+
+        if (mounted && uploadResult.message != null) {
+          _showSnackBar(uploadResult.message!);
+        }
+      }
+    } finally {
+      _activeIncidentId = null;
+      if (mounted) {
+        setState(() {
+          _isProcessingEvidence = false;
+          _processingStatus = null;
+        });
       }
     }
-
-    final shareResult = await _alertService.shareEvidence(
-      stopResult: stopResult,
-      locationUrl: locationUrl,
-    );
-
-    if (mounted && shareResult.message != null) {
-      _showSnackBar(shareResult.message!);
-    }
-
-    _activeIncidentId = null;
   }
 
   Future<void> _sendEmergencyAlert({String? locationUrl}) async {
@@ -264,163 +296,228 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       appBar: widget.isEmbedded
           ? AppBar(title: const Text('Alerta de Emergencia'))
           : null,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!widget.isEmbedded) ...[
-                const SizedBox(height: 24),
-                Text('Emergencia', style: AppTheme.headlineLarge),
-                const SizedBox(height: 6),
-                Text('Alerta rapida y segura', style: AppTheme.bodyMedium),
-              ],
-              const SizedBox(height: 32),
-              if (_isRecording)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppTheme.error.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.mic, color: AppTheme.error, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _captureStatus,
-                          style: AppTheme.bodyMedium.copyWith(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!widget.isEmbedded) ...[
+                    const SizedBox(height: 24),
+                    Text('Emergencia', style: AppTheme.headlineLarge),
+                    const SizedBox(height: 6),
+                    Text('Alerta rapida y segura', style: AppTheme.bodyMedium),
+                  ],
+                  const SizedBox(height: 32),
+                  if (_isRecording || _isProcessingEvidence)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.error.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isProcessingEvidence
+                                ? Icons.hourglass_top
+                                : Icons.mic,
                             color: AppTheme.error,
+                            size: 18,
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _isProcessingEvidence
+                                  ? (_processingStatus ??
+                                        'Procesando evidencia...')
+                                  : _captureStatus,
+                              style: AppTheme.bodyMedium.copyWith(
+                                color: AppTheme.error,
+                              ),
+                            ),
+                          ),
+                          if (_isProcessingEvidence)
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.error,
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppTheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
                       ),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.error,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Center(child: PanicButton(onActivated: _activateAlert)),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isRecording ? null : _activateAlert,
-                  icon: Icon(
-                    _isRecording ? Icons.shield_outlined : Icons.sos_rounded,
-                  ),
-                  label: Text(
-                    _isRecording ? 'Alerta activa' : 'Activar alerta',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.error,
-                    disabledBackgroundColor: AppTheme.error.withValues(
-                      alpha: 0.45,
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  Center(child: PanicButton(onActivated: _activateAlert)),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: (_isRecording || _isProcessingEvidence)
+                          ? null
+                          : _activateAlert,
+                      icon: Icon(
+                        _isRecording
+                            ? Icons.shield_outlined
+                            : Icons.sos_rounded,
+                      ),
+                      label: Text(
+                        _isRecording ? 'Alerta activa' : 'Activar alerta',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.error,
+                        disabledBackgroundColor: AppTheme.error.withValues(
+                          alpha: 0.45,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 36),
+                  const Divider(color: AppTheme.divider),
+                  const SizedBox(height: 24),
+                  Text('Acciones rapidas', style: AppTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  _ActionCard(
+                    icon: Icons.share_location_rounded,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Compartir ubicacion',
+                    subtitle: 'Abrir WhatsApp o compartir tu alerta',
+                    onTap: () =>
+                        _sendEmergencyAlert(locationUrl: _activeLocationUrl),
+                  ),
+                  const SizedBox(height: 10),
+                  _ActionCard(
+                    icon: Icons.mic_rounded,
+                    iconColor: AppTheme.error,
+                    title: 'Grabar evidencia',
+                    subtitle: 'Se activa automaticamente con el boton SOS',
+                    onTap: _activateAlert,
+                  ),
+                  const SizedBox(height: 10),
+                  _ActionCard(
+                    icon: Icons.message_rounded,
+                    iconColor: AppTheme.success,
+                    title: 'Mensaje de auxilio',
+                    subtitle:
+                        'WhatsApp directo o compartir con varios contactos',
+                    onTap: () =>
+                        _sendEmergencyAlert(locationUrl: _activeLocationUrl),
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Contactos de emergencia', style: AppTheme.titleLarge),
+                  const SizedBox(height: 12),
+                  FutureBuilder<List<ContactModel>>(
+                    future: _loadEmergencyContacts(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        );
+                      }
+
+                      final contacts = snapshot.data ?? const <ContactModel>[];
+
+                      if (contacts.isEmpty) {
+                        return _ActionCard(
+                          icon: Icons.people_outline_rounded,
+                          iconColor: AppTheme.warning,
+                          title: 'Sin contactos de emergencia',
+                          subtitle:
+                              'Agrega contactos en tu perfil para poder llamarlos desde aqui',
+                          onTap: () {
+                            _showSnackBar(
+                              'No tienes contactos de emergencia configurados.',
+                            );
+                          },
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          for (var i = 0; i < contacts.length; i++) ...[
+                            _ActionCard(
+                              icon: Icons.phone_in_talk_rounded,
+                              iconColor: AppTheme.warning,
+                              title: 'Llamar a ${contacts[i].name}',
+                              subtitle:
+                                  '${contacts[i].relation} - ${contacts[i].phone}',
+                              onTap: () {
+                                unawaited(_callEmergencyContact(contacts[i]));
+                              },
+                            ),
+                            if (i != contacts.length - 1)
+                              const SizedBox(height: 10),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
-              const SizedBox(height: 36),
-              const Divider(color: AppTheme.divider),
-              const SizedBox(height: 24),
-              Text('Acciones rapidas', style: AppTheme.titleLarge),
-              const SizedBox(height: 16),
-              _ActionCard(
-                icon: Icons.share_location_rounded,
-                iconColor: const Color(0xFF2196F3),
-                title: 'Compartir ubicacion',
-                subtitle: 'Abrir WhatsApp o compartir tu alerta',
-                onTap: () =>
-                    _sendEmergencyAlert(locationUrl: _activeLocationUrl),
-              ),
-              const SizedBox(height: 10),
-              _ActionCard(
-                icon: Icons.mic_rounded,
-                iconColor: AppTheme.error,
-                title: 'Grabar evidencia',
-                subtitle: 'Se activa automaticamente con el boton SOS',
-                onTap: _activateAlert,
-              ),
-              const SizedBox(height: 10),
-              _ActionCard(
-                icon: Icons.message_rounded,
-                iconColor: AppTheme.success,
-                title: 'Mensaje de auxilio',
-                subtitle: 'WhatsApp directo o compartir con varios contactos',
-                onTap: () =>
-                    _sendEmergencyAlert(locationUrl: _activeLocationUrl),
-              ),
-              const SizedBox(height: 24),
-              Text('Contactos de emergencia', style: AppTheme.titleLarge),
-              const SizedBox(height: 12),
-              FutureBuilder<List<ContactModel>>(
-                future: _loadEmergencyContacts(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                        child: CircularProgressIndicator(
+            ),
+          ),
+          if (_isProcessingEvidence)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.55),
+                child: Center(
+                  child: Container(
+                    width: 280,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBg,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.divider),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
                           color: AppTheme.primary,
                         ),
-                      ),
-                    );
-                  }
-
-                  final contacts = snapshot.data ?? const <ContactModel>[];
-
-                  if (contacts.isEmpty) {
-                    return _ActionCard(
-                      icon: Icons.people_outline_rounded,
-                      iconColor: AppTheme.warning,
-                      title: 'Sin contactos de emergencia',
-                      subtitle:
-                          'Agrega contactos en tu perfil para poder llamarlos desde aqui',
-                      onTap: () {
-                        _showSnackBar(
-                          'No tienes contactos de emergencia configurados.',
-                        );
-                      },
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      for (var i = 0; i < contacts.length; i++) ...[
-                        _ActionCard(
-                          icon: Icons.phone_in_talk_rounded,
-                          iconColor: AppTheme.warning,
-                          title: 'Llamar a ${contacts[i].name}',
-                          subtitle:
-                              '${contacts[i].relation} - ${contacts[i].phone}',
-                          onTap: () {
-                            unawaited(_callEmergencyContact(contacts[i]));
-                          },
+                        const SizedBox(height: 16),
+                        Text(
+                          _processingStatus ?? 'Procesando evidencia...',
+                          style: AppTheme.titleLarge,
+                          textAlign: TextAlign.center,
                         ),
-                        if (i != contacts.length - 1)
-                          const SizedBox(height: 10),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Espera un momento mientras se termina de guardar y preparar el video.',
+                          style: AppTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
                       ],
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }

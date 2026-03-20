@@ -10,6 +10,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String home = '/home';
   static const String emergency = '/emergency';
+  static const String evidence = '/evidence';
   static const String education = '/education';
   static const String directory = '/directory';
   static const String chatbot = '/chatbot';
@@ -20,10 +21,11 @@ class AppRoutes {
     register: (_) => const RegisterScreen(),
     home: (_) => const HomeScreen(),
     emergency: (_) => const HomeScreen(initialIndex: 0),
-    education: (_) => const HomeScreen(initialIndex: 1),
-    directory: (_) => const HomeScreen(initialIndex: 2),
+    evidence: (_) => const HomeScreen(initialIndex: 1),
+    education: (_) => const HomeScreen(initialIndex: 2),
+    directory: (_) => const HomeScreen(initialIndex: 3),
     chatbot: (_) => const ChatbotScreen(),
-    profile: (_) => const HomeScreen(initialIndex: 3),
+    profile: (_) => const HomeScreen(initialIndex: 4),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

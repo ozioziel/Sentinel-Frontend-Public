@@ -3,19 +3,48 @@
 .packages
 .pub/
 build/
-
-# Flutter plugin files
+coverage/
+.pub-cache/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
 
-# IntelliJ / Android Studio / VS Code
+# IDE / Editor
 .idea/
 *.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Local env / secrets
+.env
+.env.local
+.env.*.local
+!.env.groq.example
+
+# Android / signing
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+*.p12
+
+# Archives / exports
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.apk
+*.aab
+*.ipa
+
+# Tooling
+.fvm/
+.melos_tool/
 
 # Misc
 *.log
 *.tmp
 *.swp
+*.orig
 .DS_Store
-.env.groq.local
+Thumbs.db

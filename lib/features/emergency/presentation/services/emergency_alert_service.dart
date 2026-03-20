@@ -1,4 +1,3 @@
-import 'package:camera/camera.dart' show XFile;
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,10 +10,7 @@ class EmergencyActionResult {
   final bool success;
   final String? message;
 
-  const EmergencyActionResult({
-    required this.success,
-    this.message,
-  });
+  const EmergencyActionResult({required this.success, this.message});
 }
 
 class EmergencyAlertService {
@@ -27,9 +23,7 @@ class EmergencyAlertService {
   }) : _authService = authService ?? AuthService(),
        _contactsService = contactsService ?? ContactsService();
 
-  Future<EmergencyActionResult> sendLocationAlert({
-    String? locationUrl,
-  }) async {
+  Future<EmergencyActionResult> sendLocationAlert({String? locationUrl}) async {
     final user = await _authService.getSession();
     if (user == null) {
       return const EmergencyActionResult(
@@ -83,7 +77,8 @@ class EmergencyAlertService {
     if (attachmentPaths.isEmpty) {
       return const EmergencyActionResult(
         success: false,
-        message: 'La alerta se detuvo, pero no se genero audio o video para compartir.',
+        message:
+            'La alerta se detuvo, pero no se genero audio o video para compartir.',
       );
     }
 
@@ -96,8 +91,10 @@ class EmergencyAlertService {
     }
 
     try {
+      final shareMessage = _buildEmergencyMessage(locationUrl);
       final result = await SharePlus.instance.share(
         ShareParams(
+          text: shareMessage,
           title: 'Evidencia de emergencia',
           subject: 'Evidencia de emergencia',
           files: filesToShare,
@@ -108,6 +105,13 @@ class EmergencyAlertService {
         return const EmergencyActionResult(
           success: false,
           message: 'No se pudo abrir el menu para compartir la evidencia.',
+        );
+      }
+
+      if (result.status == ShareResultStatus.dismissed) {
+        return const EmergencyActionResult(
+          success: false,
+          message: 'Se canceló el envio de la evidencia.',
         );
       }
 
@@ -173,9 +177,11 @@ class EmergencyAlertService {
     required EmergencyCaptureStopResult stopResult,
     String? locationUrl,
   }) {
-    final hasVideo = stopResult.videoPath != null &&
+    final hasVideo =
+        stopResult.videoPath != null &&
         stopResult.attachmentPaths.contains(stopResult.videoPath);
-    final hasAudio = stopResult.audioPath != null &&
+    final hasAudio =
+        stopResult.audioPath != null &&
         stopResult.attachmentPaths.contains(stopResult.audioPath);
 
     if (hasVideo && hasAudio) {
@@ -184,11 +190,13 @@ class EmergencyAlertService {
     }
 
     if (hasVideo) {
-      return 'Se preparo el video SOS para compartir.';
+      final baseMessage = _buildEmergencyMessage(locationUrl);
+      return '$baseMessage Se preparo el video SOS para compartir.';
     }
 
     if (hasAudio) {
-      return 'Se preparo el audio SOS para compartir.';
+      final baseMessage = _buildEmergencyMessage(locationUrl);
+      return '$baseMessage Se preparo el audio SOS para compartir.';
     }
 
     return 'La evidencia se guardo y se abrio para compartir.';
@@ -231,10 +239,7 @@ class EmergencyAlertService {
     if (whatsappPhone.isEmpty) return false;
 
     final whatsappUri = Uri.parse(
-      'whatsapp://send?${_encodeQueryParameters({
-        'phone': whatsappPhone,
-        'text': message,
-      })}',
+      'whatsapp://send?${_encodeQueryParameters({'phone': whatsappPhone, 'text': message})}',
     );
 
     try {
@@ -277,10 +282,7 @@ class EmergencyAlertService {
     );
 
     try {
-      return await launchUrl(
-        smsUri,
-        mode: LaunchMode.externalApplication,
-      );
+      return await launchUrl(smsUri, mode: LaunchMode.externalApplication);
     } catch (_) {
       return false;
     }

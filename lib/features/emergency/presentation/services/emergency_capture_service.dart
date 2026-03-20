@@ -158,7 +158,10 @@ class EmergencyCaptureService {
       if (controller != null) {
         if (controller.value.isRecordingVideo) {
           final recordedVideo = await controller.stopVideoRecording();
-          videoPath = await _persistVideoFile(recordedVideo.path);
+          videoPath = await _finalizeVideoFile(recordedVideo.path);
+          if (videoPath == null || videoPath.isEmpty) {
+            issues.add('No se pudo preparar el video de la alerta.');
+          }
         }
         await controller.dispose();
       }
@@ -268,5 +271,44 @@ class EmergencyCaptureService {
       }
       return copiedFile.path;
     }
+  }
+
+  Future<String?> _finalizeVideoFile(String? sourcePath) async {
+    final persistedPath = await _persistVideoFile(sourcePath);
+    if (persistedPath == null || persistedPath.isEmpty) {
+      return null;
+    }
+
+    final file = File(persistedPath);
+    if (!await file.exists()) {
+      return null;
+    }
+
+    int? lastSize;
+    var stableReads = 0;
+
+    for (var attempt = 0; attempt < 12; attempt++) {
+      if (!await file.exists()) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        continue;
+      }
+
+      final currentSize = await file.length();
+      if (currentSize > 0 && currentSize == lastSize) {
+        stableReads++;
+      } else {
+        stableReads = 0;
+      }
+
+      lastSize = currentSize;
+
+      if (currentSize > 0 && stableReads >= 1) {
+        return file.path;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+
+    return (lastSize ?? 0) > 0 ? file.path : null;
   }
 }

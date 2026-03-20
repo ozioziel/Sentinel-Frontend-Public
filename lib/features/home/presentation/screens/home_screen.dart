@@ -5,6 +5,7 @@ import '../../../../shared/widgets/bottom_nav.dart';
 import '../../../directory/presentation/screens/directory_screen.dart';
 import '../../../education/presentation/screens/education_screen.dart';
 import '../../../emergency/presentation/screens/emergency_screen.dart';
+import '../../../evidence/presentation/screens/evidence_library_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const int _sectionCount = 4;
+  static const int _sectionCount = 5;
 
   late int _currentIndex;
 
@@ -51,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     const screens = <Widget>[
       EmergencyScreen(isEmbedded: true),
+      EvidenceLibraryScreen(isEmbedded: true),
       EducationScreen(isEmbedded: true),
       DirectoryScreen(isEmbedded: true),
       ProfileScreen(isEmbedded: true),

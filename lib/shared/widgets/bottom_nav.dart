@@ -23,6 +23,11 @@ class BottomNav extends StatelessWidget {
           label: 'Alerta',
         ),
         NavigationDestination(
+          icon: Icon(Icons.folder_copy_outlined),
+          selectedIcon: Icon(Icons.folder_copy),
+          label: 'Evidencias',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.menu_book_outlined),
           selectedIcon: Icon(Icons.menu_book),
           label: 'Educacion',

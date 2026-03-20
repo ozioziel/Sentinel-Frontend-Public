@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
-import '../../../auth/presentation/services/contacts_service.dart';
+import '../services/contacts_service.dart';
 
 class ContactsScreen extends StatefulWidget {
   final String userId;
+  final bool isInitialSetup;
 
-  const ContactsScreen({super.key, required this.userId});
+  const ContactsScreen({
+    super.key,
+    required this.userId,
+    this.isInitialSetup = false,
+  });
 
   @override
   State<ContactsScreen> createState() => _ContactsScreenState();
@@ -16,6 +23,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
   final ContactsService _service = ContactsService();
   List<ContactModel> _contacts = [];
   bool _isLoading = true;
+  bool _didPromptInitialForm = false;
+
+  bool get _isBlockingSetup => widget.isInitialSetup && _contacts.isEmpty;
 
   @override
   void initState() {
@@ -26,14 +36,30 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Future<void> _loadContacts() async {
     setState(() => _isLoading = true);
     final contacts = await _service.getContacts(widget.userId);
+    if (!mounted) return;
+
     setState(() {
       _contacts = contacts;
       _isLoading = false;
     });
+
+    if (widget.isInitialSetup && contacts.isNotEmpty) {
+      _finishInitialSetup();
+      return;
+    }
+
+    if (widget.isInitialSetup && contacts.isEmpty && !_didPromptInitialForm) {
+      _didPromptInitialForm = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openForm();
+        }
+      });
+    }
   }
 
-  void _openForm({ContactModel? contact}) {
-    showModalBottomSheet(
+  Future<void> _openForm({ContactModel? contact}) async {
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -45,9 +71,12 @@ class _ContactsScreenState extends State<ContactsScreen> {
         userId: widget.userId,
         contact: contact,
         service: _service,
-        onSaved: _loadContacts,
       ),
     );
+
+    if (saved == true) {
+      await _loadContacts();
+    }
   }
 
   void _confirmDelete(ContactModel contact) {
@@ -73,7 +102,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             onPressed: () async {
               Navigator.pop(context);
               await _service.deleteContact(widget.userId, contact.id);
-              _loadContacts();
+              await _loadContacts();
             },
             child: const Text(
               'Eliminar',
@@ -85,47 +114,65 @@ class _ContactsScreenState extends State<ContactsScreen> {
     );
   }
 
+  void _finishInitialSetup() {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.home,
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: const Text('Contactos de emergencia'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: AppTheme.primary),
-            onPressed: () => _openForm(),
+    return PopScope(
+      canPop: !_isBlockingSetup,
+      child: Scaffold(
+        backgroundColor: AppTheme.surface,
+        appBar: AppBar(
+          automaticallyImplyLeading: !_isBlockingSetup,
+          title: Text(
+            widget.isInitialSetup
+                ? 'Tu primer contacto de emergencia'
+                : 'Contactos de emergencia',
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
-            )
-          : _contacts.isEmpty
-          ? _EmptyState(onAdd: () => _openForm())
-          : ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: _contacts.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _ContactCard(
-                contact: _contacts[i],
-                onEdit: () => _openForm(contact: _contacts[i]),
-                onDelete: () => _confirmDelete(_contacts[i]),
-              ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add, color: AppTheme.primary),
+              onPressed: _openForm,
             ),
-      floatingActionButton: _contacts.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: () => _openForm(),
-              backgroundColor: AppTheme.primary,
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+          ],
+        ),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppTheme.primary),
+              )
+            : _contacts.isEmpty
+            ? _EmptyState(
+                onAdd: _openForm,
+                isInitialSetup: widget.isInitialSetup,
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: _contacts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _ContactCard(
+                  contact: _contacts[i],
+                  onEdit: () => _openForm(contact: _contacts[i]),
+                  onDelete: () => _confirmDelete(_contacts[i]),
+                ),
+              ),
+        floatingActionButton: _contacts.isNotEmpty
+            ? FloatingActionButton(
+                onPressed: _openForm,
+                backgroundColor: AppTheme.primary,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+            : null,
+      ),
     );
   }
 }
 
-// ── Tarjeta de contacto ───────────────────────────────────────────
 class _ContactCard extends StatelessWidget {
   final ContactModel contact;
   final VoidCallback onEdit;
@@ -201,17 +248,14 @@ class _ContactCard extends StatelessWidget {
   }
 }
 
-// ── Formulario agregar / editar ───────────────────────────────────
 class _ContactForm extends StatefulWidget {
   final String userId;
   final ContactModel? contact;
   final ContactsService service;
-  final VoidCallback onSaved;
 
   const _ContactForm({
     required this.userId,
     required this.service,
-    required this.onSaved,
     this.contact,
   });
 
@@ -227,8 +271,8 @@ class _ContactFormState extends State<_ContactForm> {
   bool _isLoading = false;
 
   final List<String> _relations = [
-    'Mamá',
-    'Papá',
+    'Mama',
+    'Papa',
     'Hermana',
     'Hermano',
     'Amiga',
@@ -243,7 +287,7 @@ class _ContactFormState extends State<_ContactForm> {
     super.initState();
     _nameController = TextEditingController(text: widget.contact?.name ?? '');
     _phoneController = TextEditingController(text: widget.contact?.phone ?? '');
-    _selectedRelation = widget.contact?.relation ?? 'Mamá';
+    _selectedRelation = widget.contact?.relation ?? 'Mama';
   }
 
   @override
@@ -280,20 +324,20 @@ class _ContactFormState extends State<_ContactForm> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pop(context);
-      widget.onSaved();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing
-                ? 'Error al actualizar el contacto'
-                : 'Ese número ya está registrado',
-          ),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      Navigator.pop(context, true);
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isEditing
+              ? 'Error al actualizar el contacto'
+              : 'Ese numero ya esta registrado',
+        ),
+        backgroundColor: AppTheme.error,
+      ),
+    );
   }
 
   @override
@@ -313,7 +357,6 @@ class _ContactFormState extends State<_ContactForm> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle
                 Center(
                   child: Container(
                     width: 40,
@@ -331,12 +374,10 @@ class _ContactFormState extends State<_ContactForm> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Este contacto recibirá la alerta de emergencia',
+                  'Este contacto recibira la alerta de emergencia',
                   style: AppTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
-
-                // Nombre
                 TextFormField(
                   controller: _nameController,
                   style: AppTheme.bodyLarge,
@@ -355,14 +396,12 @@ class _ContactFormState extends State<_ContactForm> {
                   },
                 ),
                 const SizedBox(height: 14),
-
-                // Teléfono
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   style: AppTheme.bodyLarge,
                   decoration: const InputDecoration(
-                    labelText: 'Número de WhatsApp',
+                    labelText: 'Numero de WhatsApp',
                     prefixIcon: Icon(
                       Icons.phone_outlined,
                       color: AppTheme.textSecondary,
@@ -371,7 +410,7 @@ class _ContactFormState extends State<_ContactForm> {
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'Ingresa un número';
+                      return 'Ingresa un numero';
                     }
                     final digits = v.replaceAll(RegExp(r'\D'), '');
                     if (digits.length < 8) {
@@ -381,27 +420,28 @@ class _ContactFormState extends State<_ContactForm> {
                   },
                 ),
                 const SizedBox(height: 14),
-
-                // Relación
                 DropdownButtonFormField<String>(
                   value: _selectedRelation,
                   dropdownColor: AppTheme.cardBg,
                   style: AppTheme.bodyLarge,
                   decoration: const InputDecoration(
-                    labelText: 'Relación',
+                    labelText: 'Relacion',
                     prefixIcon: Icon(
                       Icons.people_outline,
                       color: AppTheme.textSecondary,
                     ),
                   ),
-                  items: _relations
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedRelation = v ?? 'Mamá'),
+                  items: _relations.map((relation) {
+                    return DropdownMenuItem(
+                      value: relation,
+                      child: Text(relation),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => _selectedRelation = value ?? 'Mama');
+                  },
                 ),
                 const SizedBox(height: 28),
-
                 CustomButton(
                   text: _isEditing ? 'Guardar cambios' : 'Agregar contacto',
                   onPressed: _save,
@@ -423,11 +463,11 @@ class _ContactFormState extends State<_ContactForm> {
   }
 }
 
-// ── Estado vacío ──────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final VoidCallback onAdd;
+  final bool isInitialSetup;
 
-  const _EmptyState({required this.onAdd});
+  const _EmptyState({required this.onAdd, this.isInitialSetup = false});
 
   @override
   Widget build(BuildContext context) {
@@ -451,10 +491,12 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Sin contactos aún', style: AppTheme.titleLarge),
+            Text('Sin contactos aun', style: AppTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Agrega contactos de confianza que recibirán tu alerta de emergencia.',
+              isInitialSetup
+                  ? 'Antes de entrar a la app, agrega al menos un contacto de confianza para tus alertas de emergencia.'
+                  : 'Agrega contactos de confianza que recibiran tu alerta de emergencia.',
               style: AppTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

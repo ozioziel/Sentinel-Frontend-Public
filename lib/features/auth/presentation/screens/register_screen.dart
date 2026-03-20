@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
+
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import 'contacts_screen.dart';
 import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _birthDateController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -23,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String _selectedCity = 'La Paz';
+  DateTime? _selectedBirthDate;
 
   late AnimationController _animController;
   late Animation<double> _fadeIn;
@@ -47,10 +51,38 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _birthDateController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final initialDate =
+        _selectedBirthDate ?? DateTime(now.year - 18, now.month, now.day);
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(now) ? now : initialDate,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: 'Selecciona tu fecha de nacimiento',
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    setState(() {
+      _selectedBirthDate = pickedDate;
+      _birthDateController.text = _formatBirthDateLabel(pickedDate);
+    });
+  }
+
+  String _formatBirthDateLabel(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString().padLeft(4, '0');
+    return '$day/$month/$year';
   }
 
   Future<void> _register() async {
@@ -62,6 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _phoneController.text.trim(),
       _passwordController.text.trim(),
       _selectedCity,
+      _selectedBirthDate!,
     );
 
     if (!mounted) return;
@@ -74,9 +107,22 @@ class _RegisterScreenState extends State<RegisterScreen>
           backgroundColor: AppTheme.success,
         ),
       );
-      Navigator.pushNamedAndRemoveUntil(
+
+      final user = result.user;
+      if (user == null) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (route) => false,
+        );
+        return;
+      }
+
+      Navigator.pushAndRemoveUntil(
         context,
-        AppRoutes.home,
+        MaterialPageRoute(
+          builder: (_) => ContactsScreen(userId: user.id, isInitialSetup: true),
+        ),
         (route) => false,
       );
     } else {
@@ -117,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               height: 260,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primary.withOpacity(0.12),
+                color: AppTheme.primary.withValues(alpha: 0.12),
               ),
             ),
           ),
@@ -129,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primary.withOpacity(0.07),
+                color: AppTheme.primary.withValues(alpha: 0.07),
               ),
             ),
           ),
@@ -174,7 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.4),
+                                color: AppTheme.primary.withValues(alpha: 0.4),
                                 blurRadius: 20,
                                 offset: const Offset(0, 6),
                               ),
@@ -253,9 +299,34 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                         const SizedBox(height: 14),
 
+                        TextFormField(
+                          controller: _birthDateController,
+                          readOnly: true,
+                          onTap: _pickBirthDate,
+                          style: AppTheme.bodyLarge,
+                          decoration: const InputDecoration(
+                            labelText: 'Fecha de nacimiento',
+                            prefixIcon: Icon(
+                              Icons.cake_outlined,
+                              color: AppTheme.textSecondary,
+                            ),
+                            hintText: 'DD/MM/AAAA',
+                          ),
+                          validator: (v) {
+                            if (_selectedBirthDate == null) {
+                              return 'Selecciona tu fecha de nacimiento';
+                            }
+                            if (_selectedBirthDate!.isAfter(DateTime.now())) {
+                              return 'Ingresa una fecha valida';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
                         // Ciudad
                         DropdownButtonFormField<String>(
-                          value: _selectedCity,
+                          initialValue: _selectedCity,
                           dropdownColor: AppTheme.cardBg,
                           style: AppTheme.bodyLarge,
                           decoration: const InputDecoration(

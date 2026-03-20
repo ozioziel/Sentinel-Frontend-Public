@@ -70,10 +70,7 @@ class ContactModel {
       json['nombre_completo'],
       fallback: _readString(json['name']),
     ),
-    phone: _readString(
-      json['telefono'],
-      fallback: _readString(json['phone']),
-    ),
+    phone: _readString(json['telefono'], fallback: _readString(json['phone'])),
     relation: _readString(
       json['parentesco'],
       fallback: _readString(
@@ -102,11 +99,9 @@ class ContactsService {
   final AuthService _authService;
   final ApiClient _apiClient;
 
-  ContactsService({
-    AuthService? authService,
-    ApiClient? apiClient,
-  }) : _authService = authService ?? AuthService(),
-       _apiClient = apiClient ?? ApiClient();
+  ContactsService({AuthService? authService, ApiClient? apiClient})
+    : _authService = authService ?? AuthService(),
+      _apiClient = apiClient ?? ApiClient();
 
   String _cacheKey(String userId) => '$_contactsCachePrefix$userId';
 
@@ -136,6 +131,11 @@ class ContactsService {
     } catch (_) {
       return _loadCachedContacts(userId);
     }
+  }
+
+  Future<bool> hasContacts(String userId) async {
+    final contacts = await getContacts(userId);
+    return contacts.isNotEmpty;
   }
 
   Future<bool> addContact(
@@ -254,10 +254,14 @@ class ContactsService {
         return;
       }
 
-      final contacts = data
-          .map((item) => ContactModel.fromJson(Map<String, dynamic>.from(item)))
-          .toList()
-        ..sort((a, b) => a.priority.compareTo(b.priority));
+      final contacts =
+          data
+              .map(
+                (item) =>
+                    ContactModel.fromJson(Map<String, dynamic>.from(item)),
+              )
+              .toList()
+            ..sort((a, b) => a.priority.compareTo(b.priority));
 
       await _saveCachedContacts(userId, contacts);
     } catch (_) {
@@ -273,9 +277,7 @@ class ContactsService {
     }
 
     try {
-      final decoded = List<Map<String, dynamic>>.from(
-        jsonDecode(raw) as List,
-      );
+      final decoded = List<Map<String, dynamic>>.from(jsonDecode(raw) as List);
       return decoded.map(ContactModel.fromJson).toList();
     } catch (_) {
       return [];

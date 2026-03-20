@@ -13,6 +13,7 @@ class UserModel {
   final String name;
   final String phone;
   final String city;
+  final String? birthDate;
   final String email;
   final String accessToken;
   final String refreshToken;
@@ -24,6 +25,7 @@ class UserModel {
     required this.name,
     required this.phone,
     required this.city,
+    this.birthDate,
     required this.email,
     required this.accessToken,
     required this.refreshToken,
@@ -38,6 +40,7 @@ class UserModel {
     'name': name,
     'phone': phone,
     'city': city,
+    'birthDate': birthDate,
     'email': email,
     'accessToken': accessToken,
     'refreshToken': refreshToken,
@@ -50,6 +53,9 @@ class UserModel {
     name: _readString(json['name'], fallback: 'Usuaria'),
     phone: _readString(json['phone']),
     city: _readString(json['city'], fallback: 'Bolivia'),
+    birthDate: _readNullableString(
+      json['birthDate'] ?? json['fecha_nacimiento'],
+    ),
     email: _readString(
       json['email'],
       fallback: AuthIdentityMapper.buildEmailFromPhone(
@@ -172,6 +178,7 @@ class AuthService {
     String phone,
     String password,
     String city,
+    DateTime birthDate,
   ) async {
     final normalizedPhone = AuthIdentityMapper.normalizePhone(phone);
     if (normalizedPhone.isEmpty) {
@@ -214,6 +221,7 @@ class AuthService {
             'apellido_m': nameParts.middleLastName,
             'telefono': normalizedPhone,
             'email': email,
+            'fecha_nacimiento': AuthIdentityMapper.formatBirthDate(birthDate),
             'direccion_opcional': AuthIdentityMapper.buildAddressFromCity(city),
           },
         );
@@ -277,6 +285,7 @@ class AuthService {
     final city = AuthIdentityMapper.extractCity(
       _readNullableString(profile['direccion_opcional']),
     );
+    final birthDate = _readNullableString(profile['fecha_nacimiento']);
 
     return UserModel(
       id: _readString(authUser['id']),
@@ -286,6 +295,7 @@ class AuthService {
           : fullName,
       phone: phone,
       city: city,
+      birthDate: birthDate,
       email: _readString(
         profile['email'],
         fallback: _readString(authUser['email']),

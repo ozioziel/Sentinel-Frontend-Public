@@ -8,6 +8,7 @@ import '../../../../core/services/app_branding_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../auth/presentation/services/auth_service.dart';
+import '../../../evidence/presentation/services/evidence_library_service.dart';
 import 'emergency_capture_service.dart';
 
 class EmergencyIncidentResult {
@@ -37,10 +38,17 @@ class EmergencyEvidenceUploadResult {
 class EmergencyBackendService {
   final AuthService _authService;
   final ApiClient _apiClient;
+  final EvidenceLibraryService _evidenceLibraryService;
 
-  EmergencyBackendService({AuthService? authService, ApiClient? apiClient})
+  EmergencyBackendService({
+    AuthService? authService,
+    ApiClient? apiClient,
+    EvidenceLibraryService? evidenceLibraryService,
+  })
     : _authService = authService ?? AuthService(),
-      _apiClient = apiClient ?? ApiClient();
+      _apiClient = apiClient ?? ApiClient(),
+      _evidenceLibraryService =
+          evidenceLibraryService ?? EvidenceLibraryService();
 
   Future<EmergencyIncidentResult> createIncident({String? locationUrl}) async {
     final user = await _authService.getSession();
@@ -52,14 +60,17 @@ class EmergencyBackendService {
     }
 
     try {
+      final incidentTitle = 'Alerta SOS';
+      final incidentDescription = _buildIncidentDescription(locationUrl);
+      final incidentDate = DateTime.now().toUtc().toIso8601String();
       final response = await _apiClient.postJson(
         '/incidents',
         accessToken: user.accessToken,
         body: {
-          'titulo': 'Alerta SOS',
-          'descripcion': _buildIncidentDescription(locationUrl),
+          'titulo': incidentTitle,
+          'descripcion': incidentDescription,
           'tipo_incidente': 'sos',
-          'fecha_incidente': DateTime.now().toUtc().toIso8601String(),
+          'fecha_incidente': incidentDate,
           'lugar': locationUrl,
           'nivel_riesgo': 'critico',
           'estado': 'registrado',
@@ -74,6 +85,21 @@ class EmergencyBackendService {
           message: 'El servidor no devolvio un incidente valido.',
         );
       }
+
+      await _evidenceLibraryService.upsertCachedIncident(
+        userId: user.id,
+        incident: EvidenceIncidentRecord(
+          id: incidentId,
+          title: incidentTitle,
+          description: incidentDescription,
+          type: 'sos',
+          status: 'registrado',
+          riskLevel: 'critico',
+          location: locationUrl ?? '',
+          recordedAt: incidentDate,
+          evidences: const [],
+        ),
+      );
 
       return EmergencyIncidentResult(success: true, incidentId: incidentId);
     } on ApiException catch (error) {
@@ -114,6 +140,7 @@ class EmergencyBackendService {
 
     var uploadedCount = 0;
     final issues = <String>[];
+    final uploadedEvidenceRecords = <EvidenceAttachmentRecord>[];
 
     for (final filePath in attachmentPaths) {
       final file = File(filePath);
@@ -131,7 +158,12 @@ class EmergencyBackendService {
 
       try {
         final takenAt = await file.lastModified();
-        await _apiClient.postMultipart(
+        final evidenceTitle = _buildEvidenceTitle(evidenceType);
+        final evidenceDescription = _buildEvidenceDescription(
+          evidenceType: evidenceType,
+          locationUrl: locationUrl,
+        );
+        final uploadResponse = await _apiClient.postMultipart(
           '/incidents/$incidentId/evidences',
           accessToken: user.accessToken,
           fileField: 'file',
@@ -139,21 +171,49 @@ class EmergencyBackendService {
           contentType: MediaType.parse(mimeType),
           fields: {
             'tipo_evidencia': evidenceType,
-            'titulo': _buildEvidenceTitle(evidenceType),
-            'descripcion': _buildEvidenceDescription(
-              evidenceType: evidenceType,
-              locationUrl: locationUrl,
-            ),
+            'titulo': evidenceTitle,
+            'descripcion': evidenceDescription,
             'taken_at': takenAt.toUtc().toIso8601String(),
             'is_private': 'true',
           },
         );
         uploadedCount++;
+
+        final responseData = _extractDataMap(uploadResponse);
+        uploadedEvidenceRecords.add(
+          EvidenceAttachmentRecord(
+            id: _readString(
+              responseData['id'],
+              fallback:
+                  '${incidentId}_${p.basenameWithoutExtension(filePath)}_${takenAt.millisecondsSinceEpoch}',
+            ),
+            incidentId: incidentId,
+            title: evidenceTitle,
+            description: evidenceDescription,
+            type: evidenceType,
+            capturedAt: takenAt.toUtc().toIso8601String(),
+            filePath: _readString(
+              responseData['url'] ??
+                  responseData['archivo_url'] ??
+                  responseData['file_url'],
+              fallback: filePath,
+            ),
+            isPrivate: true,
+          ),
+        );
       } on ApiException catch (error) {
         issues.add(_mapUploadError(error, p.basename(filePath)));
       } catch (_) {
         issues.add('No se pudo subir ${p.basename(filePath)}.');
       }
+    }
+
+    if (uploadedEvidenceRecords.isNotEmpty) {
+      await _evidenceLibraryService.appendCachedEvidences(
+        userId: user.id,
+        incidentId: incidentId,
+        evidences: uploadedEvidenceRecords,
+      );
     }
 
     return EmergencyEvidenceUploadResult(
