@@ -32,6 +32,11 @@
 	<string>La app necesita tu ubicacion para compartirla con tus contactos de emergencia.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>La app necesita acceso al microfono para grabar audio durante una alerta SOS.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app.dart';
+import 'core/services/app_branding_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,8 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
+  await AppBrandingService.instance.initialize();
 
   runApp(const SentinelApp());
 }

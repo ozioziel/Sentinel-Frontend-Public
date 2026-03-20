@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
+import '../services/emergency_alert_service.dart';
+import '../services/emergency_backend_service.dart';
 import '../services/emergency_capture_service.dart';
 import '../widgets/panic_button.dart';
 
@@ -23,10 +24,15 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   bool _isRecording = false;
   bool _isSendingAlert = false;
   String _captureStatus = 'Grabando video, audio y ubicacion...';
+  String? _activeLocationUrl;
+  String? _activeIncidentId;
+  Future<EmergencyIncidentResult>? _incidentCreationFuture;
 
   final AuthService _authService = AuthService();
   final ContactsService _contactsService = ContactsService();
   final EmergencyCaptureService _captureService = EmergencyCaptureService();
+  final EmergencyAlertService _alertService = EmergencyAlertService();
+  final EmergencyBackendService _backendService = EmergencyBackendService();
 
   Future<void> _activateAlert() async {
     if (_isRecording) return;
@@ -41,6 +47,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       return;
     }
 
+    _activeLocationUrl = capture.mapsUrl;
+
     setState(() {
       _isRecording = true;
       _captureStatus = _buildCaptureStatus(capture);
@@ -50,14 +58,55 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       _showSnackBar(issue);
     }
 
+    _incidentCreationFuture = _backendService.createIncident(
+      locationUrl: capture.mapsUrl,
+    );
+    unawaited(_rememberIncidentId(_incidentCreationFuture!));
     unawaited(_sendEmergencyAlert(locationUrl: capture.mapsUrl));
     _showAlertDialog();
   }
 
   Future<void> _deactivateAlert() async {
-    await _captureService.stopEmergencyCapture();
+    final stopResult = await _captureService.stopEmergencyCapture();
+    final locationUrl = stopResult.mapsUrl ?? _activeLocationUrl;
+    final pendingIncidentFuture = _incidentCreationFuture;
+    _activeLocationUrl = null;
+    _incidentCreationFuture = null;
+
     if (!mounted) return;
     setState(() => _isRecording = false);
+
+    for (final issue in stopResult.issues) {
+      _showSnackBar(issue);
+    }
+
+    final incidentId = await _resolveIncidentId(
+      locationUrl: locationUrl,
+      pendingIncidentFuture: pendingIncidentFuture,
+    );
+
+    if (incidentId != null) {
+      final uploadResult = await _backendService.uploadEvidence(
+        incidentId: incidentId,
+        stopResult: stopResult,
+        locationUrl: locationUrl,
+      );
+
+      if (mounted && uploadResult.message != null) {
+        _showSnackBar(uploadResult.message!);
+      }
+    }
+
+    final shareResult = await _alertService.shareEvidence(
+      stopResult: stopResult,
+      locationUrl: locationUrl,
+    );
+
+    if (mounted && shareResult.message != null) {
+      _showSnackBar(shareResult.message!);
+    }
+
+    _activeIncidentId = null;
   }
 
   Future<void> _sendEmergencyAlert({String? locationUrl}) async {
@@ -66,46 +115,13 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     setState(() => _isSendingAlert = true);
 
     try {
-      final user = await _authService.getSession();
-      if (user == null) {
-        _showSnackBar('No hay una sesion activa.');
-        return;
-      }
-
-      final contacts = await _contactsService.getContacts(user.id);
-      final phones = contacts
-          .map((contact) => _normalizePhone(contact.phone))
-          .where((phone) => phone.isNotEmpty)
-          .toSet()
-          .toList();
-
-      if (phones.isEmpty) {
-        _showSnackBar('No tienes contactos de emergencia configurados.');
-        return;
-      }
-
-      final smsUri = Uri(
-        scheme: 'sms',
-        path: phones.join(','),
-        queryParameters: {
-          'body': _buildEmergencyMessage(locationUrl),
-        },
+      final result = await _alertService.sendLocationAlert(
+        locationUrl: locationUrl,
       );
 
-      final opened = await launchUrl(
-        smsUri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened) {
-        _showSnackBar('No se pudo abrir la app de mensajes.');
-        return;
+      if (mounted && result.message != null) {
+        _showSnackBar(result.message!);
       }
-
-      final suffix = phones.length == 1
-          ? '.'
-          : ' para ${phones.length} contactos.';
-      _showSnackBar('Se preparo la alerta con tu ubicacion$suffix');
     } catch (_) {
       _showSnackBar('Ocurrio un error al preparar la alerta.');
     } finally {
@@ -116,40 +132,58 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   }
 
   Future<void> _callEmergencyContact(ContactModel contact) async {
-    final phone = _normalizePhone(contact.phone);
-    if (phone.isEmpty) {
-      _showSnackBar('El contacto ${contact.name} no tiene un numero valido.');
-      return;
+    final result = await _alertService.callEmergencyContact(contact);
+    if (mounted && result.message != null) {
+      _showSnackBar(result.message!);
+    }
+  }
+
+  Future<void> _rememberIncidentId(
+    Future<EmergencyIncidentResult> incidentFuture,
+  ) async {
+    final result = await incidentFuture;
+    if (_incidentCreationFuture != incidentFuture) return;
+
+    if (result.success && result.incidentId != null) {
+      _activeIncidentId = result.incidentId;
+    }
+  }
+
+  Future<String?> _resolveIncidentId({
+    String? locationUrl,
+    Future<EmergencyIncidentResult>? pendingIncidentFuture,
+  }) async {
+    if (_activeIncidentId != null && _activeIncidentId!.isNotEmpty) {
+      return _activeIncidentId;
     }
 
-    final callUri = Uri(scheme: 'tel', path: phone);
-
-    try {
-      final opened = await launchUrl(
-        callUri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened) {
-        _showSnackBar('No se pudo iniciar la llamada a ${contact.name}.');
+    if (pendingIncidentFuture != null) {
+      final result = await pendingIncidentFuture;
+      if (result.success && result.incidentId != null) {
+        _activeIncidentId = result.incidentId;
+        return result.incidentId;
       }
-    } catch (_) {
-      _showSnackBar('Ocurrio un error al intentar llamar a ${contact.name}.');
     }
+
+    final createResult = await _backendService.createIncident(
+      locationUrl: locationUrl,
+    );
+    if (createResult.success && createResult.incidentId != null) {
+      _activeIncidentId = createResult.incidentId;
+      return createResult.incidentId;
+    }
+
+    if (mounted && createResult.message != null) {
+      _showSnackBar(createResult.message!);
+    }
+
+    return null;
   }
 
   Future<List<ContactModel>> _loadEmergencyContacts() async {
     final user = await _authService.getSession();
     if (user == null) return [];
     return _contactsService.getContacts(user.id);
-  }
-
-  String _buildEmergencyMessage(String? locationUrl) {
-    if (locationUrl == null) {
-      return 'Hola, necesito ayuda ahora.';
-    }
-
-    return 'Hola, necesito ayuda ahora. Mi ubicacion es: $locationUrl';
   }
 
   String _buildCaptureStatus(EmergencyCaptureResult capture) {
@@ -165,32 +199,11 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     return 'Activa: ${parts.join(', ')}';
   }
 
-  String _normalizePhone(String phone) {
-    final trimmed = phone.trim();
-    if (trimmed.isEmpty) return '';
-
-    final hasLeadingPlus = trimmed.startsWith('+');
-    var digits = trimmed.replaceAll(RegExp(r'\D'), '');
-
-    if (digits.startsWith('00')) {
-      digits = digits.substring(2);
-      return digits.isEmpty ? '' : '+$digits';
-    }
-
-    if (hasLeadingPlus) {
-      return digits.isEmpty ? '' : '+$digits';
-    }
-
-    if (digits.startsWith('591')) {
-      return '+$digits';
-    }
-
-    return digits;
-  }
-
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showAlertDialog() {
@@ -205,7 +218,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.error.withOpacity(0.15),
+                color: AppTheme.error.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -219,7 +232,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ],
         ),
         content: Text(
-          'Se inicio la alerta de emergencia. Video, audio y ubicacion quedan activos mientras mantengas esta alerta.',
+          'Se inicio la alerta de emergencia. Video, audio y ubicacion quedan activos mientras mantengas esta alerta. Al detenerla se preparara la evidencia para compartir.',
           style: AppTheme.bodyMedium,
         ),
         actions: [
@@ -229,7 +242,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               await _deactivateAlert();
             },
             child: const Text(
-              'Estoy segura',
+              'Detener y compartir',
               style: TextStyle(color: AppTheme.success),
             ),
           ),
@@ -270,9 +283,11 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: AppTheme.error.withOpacity(0.1),
+                    color: AppTheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppTheme.error.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -298,6 +313,26 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                   ),
                 ),
               Center(child: PanicButton(onActivated: _activateAlert)),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isRecording ? null : _activateAlert,
+                  icon: Icon(
+                    _isRecording ? Icons.shield_outlined : Icons.sos_rounded,
+                  ),
+                  label: Text(
+                    _isRecording ? 'Alerta activa' : 'Activar alerta',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.error,
+                    disabledBackgroundColor: AppTheme.error.withValues(
+                      alpha: 0.45,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
               const SizedBox(height: 36),
               const Divider(color: AppTheme.divider),
               const SizedBox(height: 24),
@@ -307,8 +342,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                 icon: Icons.share_location_rounded,
                 iconColor: const Color(0xFF2196F3),
                 title: 'Compartir ubicacion',
-                subtitle: 'Preparar SMS para todos tus contactos',
-                onTap: () => _sendEmergencyAlert(),
+                subtitle: 'Abrir WhatsApp o compartir tu alerta',
+                onTap: () =>
+                    _sendEmergencyAlert(locationUrl: _activeLocationUrl),
               ),
               const SizedBox(height: 10),
               _ActionCard(
@@ -323,8 +359,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                 icon: Icons.message_rounded,
                 iconColor: AppTheme.success,
                 title: 'Mensaje de auxilio',
-                subtitle: 'Enviar alerta con ubicacion a varios contactos',
-                onTap: () => _sendEmergencyAlert(),
+                subtitle: 'WhatsApp directo o compartir con varios contactos',
+                onTap: () =>
+                    _sendEmergencyAlert(locationUrl: _activeLocationUrl),
               ),
               const SizedBox(height: 24),
               Text('Contactos de emergencia', style: AppTheme.titleLarge),
@@ -368,12 +405,13 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                           iconColor: AppTheme.warning,
                           title: 'Llamar a ${contacts[i].name}',
                           subtitle:
-                              '${contacts[i].relation} • ${contacts[i].phone}',
+                              '${contacts[i].relation} - ${contacts[i].phone}',
                           onTap: () {
                             unawaited(_callEmergencyContact(contacts[i]));
                           },
                         ),
-                        if (i != contacts.length - 1) const SizedBox(height: 10),
+                        if (i != contacts.length - 1)
+                          const SizedBox(height: 10),
                       ],
                     ],
                   );
@@ -414,7 +452,7 @@ class _ActionCard extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),

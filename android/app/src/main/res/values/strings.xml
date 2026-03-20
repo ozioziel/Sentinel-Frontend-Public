@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name_default">Sentinel</string>
+    <string name="app_name_agenda">Agenda</string>
+    <string name="app_name_notas">Notas</string>
+    <string name="app_name_tareas">Tareas</string>
+    <string name="emergency_widget_title">SOS</string>
+    <string name="emergency_widget_subtitle">Abre la alerta de emergencia al instante</string>
+    <string name="emergency_widget_button">Abrir alerta</string>
+    <string name="emergency_widget_description">Widget de acceso rapido a la alerta SOS</string>
+</resources>

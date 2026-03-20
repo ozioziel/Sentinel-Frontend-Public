@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/app_branding_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../shared/widgets/custom_button.dart';
@@ -58,7 +59,11 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = false);
 
     if (result.success) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -71,6 +76,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final appName = AppBrandingService.instance.displayName;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -154,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Sentinel',
+                          appName,
                           style: AppTheme.headlineLarge.copyWith(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
@@ -200,6 +207,10 @@ class _LoginScreenState extends State<LoginScreen>
                             if (v == null || v.trim().isEmpty) {
                               return 'Ingresa tu número';
                             }
+                            final digits = v.replaceAll(RegExp(r'\D'), '');
+                            if (digits.length < 8) {
+                              return 'Ingresa un numero valido';
+                            }
                             return null;
                           },
                         ),
@@ -229,6 +240,9 @@ class _LoginScreenState extends State<LoginScreen>
                           validator: (v) {
                             if (v == null || v.isEmpty) {
                               return 'Ingresa tu contraseña';
+                            }
+                            if (v.length < 8) {
+                              return 'Minimo 8 caracteres';
                             }
                             return null;
                           },

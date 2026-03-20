@@ -74,7 +74,11 @@ class _RegisterScreenState extends State<RegisterScreen>
           backgroundColor: AppTheme.success,
         ),
       );
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -240,6 +244,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                             if (v == null || v.trim().isEmpty) {
                               return 'Ingresa tu número';
                             }
+                            final digits = v.replaceAll(RegExp(r'\D'), '');
+                            if (digits.length < 8) {
+                              return 'Ingresa un numero valido';
+                            }
                             return null;
                           },
                         ),
@@ -299,8 +307,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                             if (v == null || v.isEmpty) {
                               return 'Ingresa una contraseña';
                             }
-                            if (v.length < 4) {
-                              return 'Mínimo 4 caracteres';
+                            if (v.length < 8) {
+                              return 'Minimo 8 caracteres';
                             }
                             return null;
                           },

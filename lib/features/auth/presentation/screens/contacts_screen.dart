@@ -373,6 +373,10 @@ class _ContactFormState extends State<_ContactForm> {
                     if (v == null || v.trim().isEmpty) {
                       return 'Ingresa un número';
                     }
+                    final digits = v.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length < 8) {
+                      return 'Ingresa un numero valido';
+                    }
                     return null;
                   },
                 ),

@@ -17,42 +17,48 @@ class _EducationScreenState extends State<EducationScreen> {
       icon: Icons.favorite_rounded,
       color: Color(0xFFD63864),
       title: 'Derechos Sexuales',
-      description: 'Conoce tus derechos sexuales fundamentales y cómo ejercerlos libremente.',
+      description:
+          'Conoce tus derechos sexuales fundamentales y cómo ejercerlos libremente.',
       tag: 'Básico',
     ),
     _Topic(
       icon: Icons.child_care_rounded,
       color: Color(0xFF9C27B0),
       title: 'Derechos Reproductivos',
-      description: 'Información sobre planificación familiar, anticoncepción y salud reproductiva.',
+      description:
+          'Información sobre planificación familiar, anticoncepción y salud reproductiva.',
       tag: 'Importante',
     ),
     _Topic(
       icon: Icons.shield_rounded,
       color: Color(0xFF2196F3),
       title: 'Prevención de Violencia',
-      description: 'Aprende a identificar señales de violencia sexual y de género.',
+      description:
+          'Aprende a identificar señales de violencia sexual y de género.',
       tag: 'Seguridad',
     ),
     _Topic(
       icon: Icons.medical_services_rounded,
       color: Color(0xFF4CAF50),
       title: 'Métodos Anticonceptivos',
-      description: 'Guía completa sobre tipos, eficacia y acceso a métodos anticonceptivos en Bolivia.',
+      description:
+          'Guía completa sobre tipos, eficacia y acceso a métodos anticonceptivos en Bolivia.',
       tag: 'Salud',
     ),
     _Topic(
       icon: Icons.warning_amber_rounded,
       color: Color(0xFFF57C00),
       title: '¿Qué hacer si estás en riesgo?',
-      description: 'Pasos a seguir si sientes que puedes ser víctima de un ataque o violencia.',
+      description:
+          'Pasos a seguir si sientes que puedes ser víctima de un ataque o violencia.',
       tag: 'Urgente',
     ),
     _Topic(
       icon: Icons.healing_rounded,
       color: Color(0xFF00BCD4),
       title: 'Qué hacer después',
-      description: 'Apoyo, recursos y pasos legales tras una situación de violencia sexual.',
+      description:
+          'Apoyo, recursos y pasos legales tras una situación de violencia sexual.',
       tag: 'Recuperación',
     ),
   ];
@@ -76,8 +82,10 @@ class _EducationScreenState extends State<EducationScreen> {
                     if (!widget.isEmbedded) ...[
                       Text('Educación', style: AppTheme.headlineLarge),
                       const SizedBox(height: 6),
-                      Text('Derechos Sexuales y Reproductivos',
-                          style: AppTheme.bodyMedium),
+                      Text(
+                        'Derechos Sexuales y Reproductivos',
+                        style: AppTheme.bodyMedium,
+                      ),
                     ],
                     const SizedBox(height: 20),
                     // Search
@@ -92,11 +100,16 @@ class _EducationScreenState extends State<EducationScreen> {
                         decoration: InputDecoration(
                           hintText: 'Buscar tema...',
                           hintStyle: AppTheme.bodyMedium,
-                          prefixIcon: const Icon(Icons.search,
-                              color: AppTheme.textSecondary, size: 20),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppTheme.textSecondary,
+                            size: 20,
+                          ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -110,17 +123,14 @@ class _EducationScreenState extends State<EducationScreen> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    if (i >= _topics.length) return null;
-                    final t = _topics[i];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _TopicCard(topic: t),
-                    );
-                  },
-                  childCount: _topics.length,
-                ),
+                delegate: SliverChildBuilderDelegate((_, i) {
+                  if (i >= _topics.length) return null;
+                  final t = _topics[i];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _TopicCard(topic: t),
+                  );
+                }, childCount: _topics.length),
               ),
             ),
           ],
@@ -164,7 +174,9 @@ class _TopicCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: topic.color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -181,7 +193,10 @@ class _TopicCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(topic.description, style: AppTheme.bodyMedium.copyWith(fontSize: 13)),
+                Text(
+                  topic.description,
+                  style: AppTheme.bodyMedium.copyWith(fontSize: 13),
+                ),
                 const SizedBox(height: 10),
                 Row(
                   children: [

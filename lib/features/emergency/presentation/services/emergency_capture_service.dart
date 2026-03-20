@@ -5,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
 
 class EmergencyCaptureResult {
   final bool videoStarted;
@@ -33,16 +32,51 @@ class EmergencyCaptureResult {
   }
 }
 
+class EmergencyCaptureStopResult {
+  final Position? position;
+  final String? videoPath;
+  final String? audioPath;
+  final String? sessionDirectoryPath;
+  final List<String> issues;
+
+  const EmergencyCaptureStopResult({
+    required this.position,
+    required this.videoPath,
+    required this.audioPath,
+    required this.sessionDirectoryPath,
+    required this.issues,
+  });
+
+  List<String> get attachmentPaths {
+    final paths = <String>[];
+    if (_fileExists(videoPath)) paths.add(videoPath!);
+    if (_fileExists(audioPath)) paths.add(audioPath!);
+    return paths;
+  }
+
+  bool get hasEvidence => attachmentPaths.isNotEmpty;
+
+  String? get mapsUrl {
+    final current = position;
+    if (current == null) return null;
+    return 'https://maps.google.com/?q=${current.latitude},${current.longitude}';
+  }
+
+  bool _fileExists(String? path) {
+    if (path == null || path.isEmpty) return false;
+    return File(path).existsSync();
+  }
+}
+
 class EmergencyCaptureService {
   CameraController? _cameraController;
-  AudioRecorder? _audioRecorder;
+  Directory? _sessionDirectory;
 
   Future<EmergencyCaptureResult> startEmergencyCapture() async {
     final issues = <String>[];
     var videoStarted = false;
     var audioStarted = false;
     String? videoPath;
-    String? audioPath;
     Position? position;
 
     final cameraGranted = await _requestPermission(Permission.camera);
@@ -50,16 +84,17 @@ class EmergencyCaptureService {
     final locationGranted = await _requestLocationPermission();
 
     if (!cameraGranted) {
-      issues.add('Sin permiso de cámara.');
+      issues.add('Sin permiso de camara.');
     }
     if (!microphoneGranted) {
-      issues.add('Sin permiso de micrófono.');
+      issues.add('Sin permiso de microfono.');
     }
     if (!locationGranted) {
-      issues.add('Sin permiso de ubicación.');
+      issues.add('Sin permiso de ubicacion.');
     }
 
     final sessionDirectory = await _createSessionDirectory();
+    _sessionDirectory = sessionDirectory;
 
     if (cameraGranted) {
       try {
@@ -72,7 +107,7 @@ class EmergencyCaptureService {
         final controller = CameraController(
           selectedCamera,
           ResolutionPreset.medium,
-          enableAudio: false,
+          enableAudio: microphoneGranted,
         );
 
         await controller.initialize();
@@ -84,23 +119,9 @@ class EmergencyCaptureService {
         await controller.startVideoRecording();
         _cameraController = controller;
         videoStarted = true;
+        audioStarted = microphoneGranted;
       } catch (_) {
-        issues.add('No se pudo iniciar la grabación de video.');
-      }
-    }
-
-    if (microphoneGranted) {
-      try {
-        final recorder = AudioRecorder();
-        audioPath = p.join(sessionDirectory.path, 'sos_audio.m4a');
-        await recorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc),
-          path: audioPath,
-        );
-        _audioRecorder = recorder;
-        audioStarted = true;
-      } catch (_) {
-        issues.add('No se pudo iniciar la grabación de audio.');
+        issues.add('No se pudo iniciar la grabacion de video.');
       }
     }
 
@@ -112,7 +133,7 @@ class EmergencyCaptureService {
           ),
         );
       } catch (_) {
-        issues.add('No se pudo obtener la ubicación actual.');
+        issues.add('No se pudo obtener la ubicacion actual.');
       }
     }
 
@@ -121,39 +142,53 @@ class EmergencyCaptureService {
       audioStarted: audioStarted,
       position: position,
       videoPath: videoPath,
-      audioPath: audioPath,
+      audioPath: null,
       issues: issues,
     );
   }
 
-  Future<void> stopEmergencyCapture() async {
+  Future<EmergencyCaptureStopResult> stopEmergencyCapture() async {
+    final issues = <String>[];
+    final sessionDirectoryPath = _sessionDirectory?.path;
+    String? videoPath;
+    Position? position;
+
     try {
       final controller = _cameraController;
       if (controller != null) {
         if (controller.value.isRecordingVideo) {
-          await controller.stopVideoRecording();
+          final recordedVideo = await controller.stopVideoRecording();
+          videoPath = await _persistVideoFile(recordedVideo.path);
         }
         await controller.dispose();
       }
     } catch (_) {
-      // Keep emergency teardown resilient.
+      issues.add('No se pudo guardar el video de la alerta.');
     } finally {
       _cameraController = null;
     }
 
     try {
-      final recorder = _audioRecorder;
-      if (recorder != null) {
-        if (await recorder.isRecording()) {
-          await recorder.stop();
-        }
-        await recorder.dispose();
+      if (await _hasLocationAccess()) {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
+        );
       }
     } catch (_) {
-      // Keep emergency teardown resilient.
+      issues.add('No se pudo actualizar la ubicacion final.');
     } finally {
-      _audioRecorder = null;
+      _sessionDirectory = null;
     }
+
+    return EmergencyCaptureStopResult(
+      position: position,
+      videoPath: videoPath,
+      audioPath: null,
+      sessionDirectoryPath: sessionDirectoryPath,
+      issues: issues,
+    );
   }
 
   Future<bool> _requestPermission(Permission permission) async {
@@ -169,11 +204,26 @@ class EmergencyCaptureService {
     return status.isGranted || status.isLimited;
   }
 
+  Future<bool> _hasLocationAccess() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return false;
+
+    final status = await Permission.locationWhenInUse.status;
+    return status.isGranted || status.isLimited;
+  }
+
   Future<Directory> _createSessionDirectory() async {
-    final baseDirectory = await getTemporaryDirectory();
+    final baseDirectory = await getApplicationDocumentsDirectory();
+    final evidenceDirectory = Directory(
+      p.join(baseDirectory.path, 'emergency_evidence'),
+    );
+    if (!await evidenceDirectory.exists()) {
+      await evidenceDirectory.create(recursive: true);
+    }
+
     final sessionDirectory = Directory(
       p.join(
-        baseDirectory.path,
+        evidenceDirectory.path,
         'emergency_${DateTime.now().millisecondsSinceEpoch}',
       ),
     );
@@ -183,5 +233,40 @@ class EmergencyCaptureService {
     }
 
     return sessionDirectory;
+  }
+
+  Future<String?> _persistVideoFile(String? sourcePath) async {
+    if (sourcePath == null || sourcePath.isEmpty) return null;
+
+    final sourceFile = File(sourcePath);
+    if (!await sourceFile.exists()) return null;
+
+    final sessionDirectory = _sessionDirectory;
+    if (sessionDirectory == null) {
+      return sourceFile.path;
+    }
+
+    final extension = p.extension(sourcePath);
+    final targetPath = p.join(
+      sessionDirectory.path,
+      'sos_video${extension.isEmpty ? '.mp4' : extension}',
+    );
+
+    if (p.equals(sourceFile.path, targetPath)) {
+      return sourceFile.path;
+    }
+
+    try {
+      final movedFile = await sourceFile.rename(targetPath);
+      return movedFile.path;
+    } catch (_) {
+      final copiedFile = await sourceFile.copy(targetPath);
+      try {
+        await sourceFile.delete();
+      } catch (_) {
+        // Keep cleanup resilient after a successful copy.
+      }
+      return copiedFile.path;
+    }
   }
 }

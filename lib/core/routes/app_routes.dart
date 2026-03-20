@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
+
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/auth/presentation/screens/register_screen.dart'; // ← 1. import
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/chatbot/presentation/screens/chatbot_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/emergency/presentation/screens/emergency_screen.dart';
-import '../../features/education/presentation/screens/education_screen.dart';
-import '../../features/directory/presentation/screens/directory_screen.dart';
-import '../../features/profile/presentation/screens/profile_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
-  static const String register = '/register'; // ← 2. constante
+  static const String register = '/register';
   static const String home = '/home';
   static const String emergency = '/emergency';
   static const String education = '/education';
   static const String directory = '/directory';
+  static const String chatbot = '/chatbot';
   static const String profile = '/profile';
 
   static Map<String, WidgetBuilder> get routes => {
     login: (_) => const LoginScreen(),
-    register: (_) => const RegisterScreen(), // ← 3. ruta
+    register: (_) => const RegisterScreen(),
     home: (_) => const HomeScreen(),
-    emergency: (_) => const EmergencyScreen(),
-    education: (_) => const EducationScreen(),
-    directory: (_) => const DirectoryScreen(),
-    profile: (_) => const ProfileScreen(),
+    emergency: (_) => const HomeScreen(initialIndex: 0),
+    education: (_) => const HomeScreen(initialIndex: 1),
+    directory: (_) => const HomeScreen(initialIndex: 2),
+    chatbot: (_) => const ChatbotScreen(),
+    profile: (_) => const HomeScreen(initialIndex: 3),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -31,9 +31,10 @@ class AppRoutes {
     if (builder != null) {
       return MaterialPageRoute(builder: builder, settings: settings);
     }
+
     return MaterialPageRoute(
       builder: (_) =>
-          const Scaffold(body: Center(child: Text('Página no encontrada'))),
+          const Scaffold(body: Center(child: Text('Pagina no encontrada'))),
     );
   }
 }
