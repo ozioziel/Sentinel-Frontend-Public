@@ -27,14 +27,11 @@ class CustomCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? AppTheme.cardBg,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: borderColor ?? AppTheme.divider,
-          width: 1,
-        ),
+        border: Border.all(color: borderColor ?? AppTheme.divider, width: 1),
         boxShadow: hasShadow
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),

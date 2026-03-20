@@ -58,7 +58,11 @@ class EducationTopicDetailScreen extends StatelessWidget {
                         'El comic se muestra completo en vertical para leerlo bajando.',
                   ),
                   const SizedBox(height: 12),
-                  for (var index = 0; index < topic.storyPanels.length; index++) ...[
+                  for (
+                    var index = 0;
+                    index < topic.storyPanels.length;
+                    index++
+                  ) ...[
                     EducationStoryPanelCard(
                       panel: topic.storyPanels[index],
                       index: index,

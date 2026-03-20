@@ -82,9 +82,9 @@ class _EducationScreenState extends State<EducationScreen> {
         _isFeedingPet = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
     } catch (_) {
       if (!mounted) {
         return;
@@ -109,9 +109,7 @@ class _EducationScreenState extends State<EducationScreen> {
 
   Future<void> _openGames() async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const EducationGamesScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const EducationGamesScreen()),
     );
 
     if (!mounted) {

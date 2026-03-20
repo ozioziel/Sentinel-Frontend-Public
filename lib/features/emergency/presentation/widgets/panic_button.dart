@@ -85,10 +85,7 @@ class _PanicButtonState extends State<PanicButton>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
-                      colors: [
-                        AppTheme.error,
-                        AppTheme.error.withRed(180),
-                      ],
+                      colors: [AppTheme.error, AppTheme.error.withRed(180)],
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -101,11 +98,7 @@ class _PanicButtonState extends State<PanicButton>
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.crisis_alert,
-                        color: Colors.white,
-                        size: 36,
-                      ),
+                      Icon(Icons.crisis_alert, color: Colors.white, size: 36),
                       SizedBox(height: 6),
                       Text(
                         'SOS',

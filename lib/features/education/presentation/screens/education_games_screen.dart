@@ -265,7 +265,8 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
                   _selectedAnswerIndex == index &&
                   question.correctIndex != index,
             ),
-            if (index != question.options.length - 1) const SizedBox(height: 10),
+            if (index != question.options.length - 1)
+              const SizedBox(height: 10),
           ],
           if (_showExplanation) ...[
             const SizedBox(height: 16),

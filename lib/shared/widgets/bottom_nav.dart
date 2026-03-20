@@ -15,7 +15,7 @@ class BottomNav extends StatelessWidget {
       onDestinationSelected: onTap,
       backgroundColor: AppTheme.cardBg,
       indicatorColor: AppTheme.primary.withValues(alpha: 0.18),
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
       destinations: const [
         NavigationDestination(
           icon: Icon(Icons.crisis_alert_outlined),
@@ -28,14 +28,19 @@ class BottomNav extends StatelessWidget {
           label: 'Evidencias',
         ),
         NavigationDestination(
+          icon: Icon(Icons.description_outlined),
+          selectedIcon: Icon(Icons.description),
+          label: 'Incidentes',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.menu_book_outlined),
           selectedIcon: Icon(Icons.menu_book),
-          label: 'Educacion',
+          label: 'Aprende',
         ),
         NavigationDestination(
           icon: Icon(Icons.location_on_outlined),
           selectedIcon: Icon(Icons.location_on),
-          label: 'Destino',
+          label: 'Directorio',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),

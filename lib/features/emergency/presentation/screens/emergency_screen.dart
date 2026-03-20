@@ -119,7 +119,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         pendingIncidentFuture: pendingIncidentFuture,
       );
 
-      if (incidentId != null && hasEvidence) {
+      if (hasEvidence) {
         final uploadResult = await _backendService.uploadEvidence(
           incidentId: incidentId,
           stopResult: stopResult,
@@ -408,7 +408,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     icon: Icons.mic_rounded,
                     iconColor: AppTheme.error,
                     title: 'Grabar evidencia',
-                    subtitle: 'Se activa automaticamente con el boton SOS',
+                    subtitle:
+                        'La alerta SOS la registra automaticamente. Tambien puedes crear evidencias manuales desde su modulo.',
                     onTap: _activateAlert,
                   ),
                   const SizedBox(height: 10),
