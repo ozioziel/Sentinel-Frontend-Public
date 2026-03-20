@@ -85,7 +85,9 @@ class EducationPetState {
       return 'Todavia no la alimentaste.';
     }
 
-    final date = DateTime.fromMillisecondsSinceEpoch(lastFedAtMillis!).toLocal();
+    final date = DateTime.fromMillisecondsSinceEpoch(
+      lastFedAtMillis!,
+    ).toLocal();
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     return 'Ultima comida: $hour:$minute';

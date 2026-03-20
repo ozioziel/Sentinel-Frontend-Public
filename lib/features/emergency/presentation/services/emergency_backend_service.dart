@@ -1,14 +1,15 @@
 import 'dart:io';
 
-import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../../core/services/app_branding_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/services/app_branding_service.dart';
 import '../../../auth/presentation/services/auth_service.dart';
-import '../../../evidence/presentation/services/evidence_library_service.dart';
+import '../../../evidence/presentation/services/evidence_service.dart';
+import '../../../incidents/domain/models/incident_record.dart';
+import '../../../incidents/presentation/services/incident_service.dart';
 import 'emergency_capture_service.dart';
 
 class EmergencyIncidentResult {
@@ -38,17 +39,18 @@ class EmergencyEvidenceUploadResult {
 class EmergencyBackendService {
   final AuthService _authService;
   final ApiClient _apiClient;
-  final EvidenceLibraryService _evidenceLibraryService;
+  final EvidenceService _evidenceService;
+  final IncidentService _incidentService;
 
   EmergencyBackendService({
     AuthService? authService,
     ApiClient? apiClient,
-    EvidenceLibraryService? evidenceLibraryService,
-  })
-    : _authService = authService ?? AuthService(),
-      _apiClient = apiClient ?? ApiClient(),
-      _evidenceLibraryService =
-          evidenceLibraryService ?? EvidenceLibraryService();
+    EvidenceService? evidenceService,
+    IncidentService? incidentService,
+  }) : _authService = authService ?? AuthService(),
+       _apiClient = apiClient ?? ApiClient(),
+       _evidenceService = evidenceService ?? EvidenceService(),
+       _incidentService = incidentService ?? IncidentService();
 
   Future<EmergencyIncidentResult> createIncident({String? locationUrl}) async {
     final user = await _authService.getSession();
@@ -86,9 +88,9 @@ class EmergencyBackendService {
         );
       }
 
-      await _evidenceLibraryService.upsertCachedIncident(
+      await _incidentService.upsertCachedIncident(
         userId: user.id,
-        incident: EvidenceIncidentRecord(
+        incident: IncidentRecord(
           id: incidentId,
           title: incidentTitle,
           description: incidentDescription,
@@ -96,8 +98,7 @@ class EmergencyBackendService {
           status: 'registrado',
           riskLevel: 'critico',
           location: locationUrl ?? '',
-          recordedAt: incidentDate,
-          evidences: const [],
+          occurredAt: incidentDate,
         ),
       );
 
@@ -116,7 +117,7 @@ class EmergencyBackendService {
   }
 
   Future<EmergencyEvidenceUploadResult> uploadEvidence({
-    required String incidentId,
+    required String? incidentId,
     required EmergencyCaptureStopResult stopResult,
     String? locationUrl,
   }) async {
@@ -140,7 +141,6 @@ class EmergencyBackendService {
 
     var uploadedCount = 0;
     final issues = <String>[];
-    final uploadedEvidenceRecords = <EvidenceAttachmentRecord>[];
 
     for (final filePath in attachmentPaths) {
       final file = File(filePath);
@@ -163,57 +163,48 @@ class EmergencyBackendService {
           evidenceType: evidenceType,
           locationUrl: locationUrl,
         );
-        final uploadResponse = await _apiClient.postMultipart(
-          '/incidents/$incidentId/evidences',
-          accessToken: user.accessToken,
-          fileField: 'file',
+        final createResult = await _evidenceService.createEvidence(
           filePath: filePath,
-          contentType: MediaType.parse(mimeType),
-          fields: {
-            'tipo_evidencia': evidenceType,
-            'titulo': evidenceTitle,
-            'descripcion': evidenceDescription,
-            'taken_at': takenAt.toUtc().toIso8601String(),
-            'is_private': 'true',
-          },
+          selectedType: evidenceType,
+          title: evidenceTitle,
+          description: evidenceDescription,
+          takenAt: takenAt,
+          isPrivate: true,
         );
+
+        if (!createResult.success || createResult.evidence == null) {
+          issues.add('${p.basename(filePath)}: ${createResult.message}');
+          continue;
+        }
+
+        var storedEvidence = createResult.evidence!;
         uploadedCount++;
 
-        final responseData = _extractDataMap(uploadResponse);
-        uploadedEvidenceRecords.add(
-          EvidenceAttachmentRecord(
-            id: _readString(
-              responseData['id'],
-              fallback:
-                  '${incidentId}_${p.basenameWithoutExtension(filePath)}_${takenAt.millisecondsSinceEpoch}',
-            ),
-            incidentId: incidentId,
+        if (incidentId != null && incidentId.trim().isNotEmpty) {
+          final associationResult = await _evidenceService
+              .updateEvidenceIncident(
+                evidence: storedEvidence,
+                incidentId: incidentId,
+              );
+          if (associationResult.success && associationResult.evidence != null) {
+            storedEvidence = associationResult.evidence!;
+          } else {
+            issues.add(
+              '${p.basename(filePath)} se subio, pero no se pudo asociar al incidente.',
+            );
+          }
+        }
+
+        await _evidenceService.upsertCachedEvidence(
+          userId: user.id,
+          evidence: storedEvidence.copyWith(
             title: evidenceTitle,
             description: evidenceDescription,
-            type: evidenceType,
-            capturedAt: takenAt.toUtc().toIso8601String(),
-            filePath: _readString(
-              responseData['url'] ??
-                  responseData['archivo_url'] ??
-                  responseData['file_url'],
-              fallback: filePath,
-            ),
-            isPrivate: true,
           ),
         );
-      } on ApiException catch (error) {
-        issues.add(_mapUploadError(error, p.basename(filePath)));
       } catch (_) {
         issues.add('No se pudo subir ${p.basename(filePath)}.');
       }
-    }
-
-    if (uploadedEvidenceRecords.isNotEmpty) {
-      await _evidenceLibraryService.appendCachedEvidences(
-        userId: user.id,
-        incidentId: incidentId,
-        evidences: uploadedEvidenceRecords,
-      );
     }
 
     return EmergencyEvidenceUploadResult(
@@ -341,39 +332,19 @@ class EmergencyBackendService {
 
     return error.message;
   }
+}
 
-  String _mapUploadError(ApiException error, String filename) {
-    final lowerMessage = error.message.toLowerCase();
-    final appName = AppBrandingService.instance.displayName;
-
-    if (lowerMessage.contains('tipo de archivo no permitido')) {
-      return '$filename no tiene un formato permitido por el backend.';
-    }
-
-    if (lowerMessage.contains('request entity too large') ||
-        lowerMessage.contains('payload too large')) {
-      return '$filename es demasiado grande para subir al servidor.';
-    }
-
-    if (lowerMessage.contains('no se pudo conectar con el servidor')) {
-      return 'No se pudo conectar con $appName para subir $filename.';
-    }
-
-    return 'No se pudo subir $filename: ${error.message}';
+Map<String, dynamic> _extractDataMap(Map<String, dynamic> response) {
+  final data = response['data'];
+  if (data is Map<String, dynamic>) {
+    return data;
   }
 
-  Map<String, dynamic> _extractDataMap(Map<String, dynamic> response) {
-    final data = response['data'];
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
-    }
-
-    return <String, dynamic>{};
+  if (data is Map) {
+    return Map<String, dynamic>.from(data);
   }
+
+  return <String, dynamic>{};
 }
 
 String _readString(dynamic value, {String fallback = ''}) {

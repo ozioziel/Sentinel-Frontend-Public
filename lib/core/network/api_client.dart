@@ -43,10 +43,7 @@ class ApiClient {
     return _sendRequest(request);
   }
 
-  Future<Map<String, dynamic>> deleteJson(
-    String path, {
-    String? accessToken,
-  }) {
+  Future<Map<String, dynamic>> deleteJson(String path, {String? accessToken}) {
     final request = http.Request('DELETE', _buildUri(path))
       ..headers.addAll(_buildHeaders(accessToken: accessToken));
     return _sendRequest(request);
@@ -82,9 +79,7 @@ class ApiClient {
           .send(request)
           .timeout(const Duration(seconds: 25));
     } catch (_) {
-      throw const ApiException(
-        message: 'No se pudo conectar con el servidor.',
-      );
+      throw const ApiException(message: 'No se pudo conectar con el servidor.');
     }
 
     final response = await http.Response.fromStream(streamedResponse);
@@ -117,26 +112,20 @@ class ApiClient {
         ? baseUri.path.substring(0, baseUri.path.length - 1)
         : baseUri.path;
     final resolvedPath = '$basePath$normalizedPath';
-    final normalizedQuery = queryParameters == null
-        ? null
-        : queryParameters.map(
-            (key, value) => MapEntry(key, value?.toString() ?? ''),
-          );
+    final normalizedQuery = queryParameters?.map(
+      (key, value) => MapEntry(key, value?.toString() ?? ''),
+    );
 
     return baseUri.replace(
       path: resolvedPath.isEmpty ? '/' : resolvedPath,
-      queryParameters:
-          (normalizedQuery?.isEmpty ?? true) ? null : normalizedQuery,
+      queryParameters: (normalizedQuery?.isEmpty ?? true)
+          ? null
+          : normalizedQuery,
     );
   }
 
-  Map<String, String> _buildHeaders({
-    String? accessToken,
-    bool isJson = true,
-  }) {
-    final headers = <String, String>{
-      'Accept': 'application/json',
-    };
+  Map<String, String> _buildHeaders({String? accessToken, bool isJson = true}) {
+    final headers = <String, String>{'Accept': 'application/json'};
 
     if (isJson) {
       headers['Content-Type'] = 'application/json';
@@ -170,10 +159,7 @@ class ApiClient {
       return body.map((key, value) => MapEntry(key.toString(), value));
     }
 
-    return {
-      'success': true,
-      'data': body,
-    };
+    return {'success': true, 'data': body};
   }
 
   String _extractMessage(
