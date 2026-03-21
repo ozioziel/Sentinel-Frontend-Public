@@ -58,14 +58,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
 
       setState(() {
-        _messages.add(_ChatMessage(text: reply, isUser: false));
+        _messages.add(_ChatMessage(text: reply, isUser: false, animated: true));
         _isBotTyping = false;
       });
     } on ChatbotException catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _messages.add(_ChatMessage(text: error.message, isUser: false));
+        _messages.add(_ChatMessage(text: error.message, isUser: false, animated: true));
         _isBotTyping = false;
       });
     } catch (_) {
@@ -76,6 +76,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _ChatMessage(
             text: context.tr('chatbot.errors.unexpected'),
             isUser: false,
+            animated: true,
           ),
         );
         _isBotTyping = false;
@@ -187,6 +188,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           itemBuilder: (context, index) {
                             if (index == _messages.length) {
                               return const ChatMessageBubble(
+                                key: ValueKey('__typing__'),
                                 text: '',
                                 isUser: false,
                                 isTyping: true,
@@ -195,8 +197,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
                             final message = _messages[index];
                             return ChatMessageBubble(
+                              key: ValueKey('msg_$index'),
                               text: message.text,
                               isUser: message.isUser,
+                              animated: message.animated,
                             );
                           },
                         ),
@@ -258,8 +262,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 class _ChatMessage {
   final String text;
   final bool isUser;
+  final bool animated;
 
-  const _ChatMessage({required this.text, required this.isUser});
+  const _ChatMessage({required this.text, required this.isUser, this.animated = false});
 }
 
 class _ChatStageBackground extends StatelessWidget {

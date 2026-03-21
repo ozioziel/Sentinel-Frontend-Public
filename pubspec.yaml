@@ -41,4 +41,5 @@ flutter:
     - assets/i18n/
     - assets/images/
     - assets/images/emergency/
+    - assets/images/garabato_chatbot/
     - assets/videos/

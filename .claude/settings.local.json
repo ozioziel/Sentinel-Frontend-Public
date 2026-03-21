@@ -3,7 +3,8 @@
     "allow": [
       "Bash(while read:*)",
       "Bash(do if:*)",
-      "Bash(then echo:*)"
+      "Bash(then echo:*)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }
