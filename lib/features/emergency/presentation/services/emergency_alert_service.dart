@@ -260,6 +260,12 @@ class EmergencyAlertService {
     );
   }
 
+  Future<EmergencyActionResult> sendTextAlert({
+    DateTime? alertTriggeredAt,
+  }) {
+    return sendLocationAlert(alertTriggeredAt: alertTriggeredAt);
+  }
+
   Future<EmergencyActionResult?> retryPendingWhatsAppAlert() async {
     final pendingAlert = await _loadPendingWhatsAppAlert();
     if (pendingAlert == null) {

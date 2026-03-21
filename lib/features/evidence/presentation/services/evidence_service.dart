@@ -310,7 +310,7 @@ class EvidenceService {
         fields: fields,
       );
 
-      final createdEvidence =
+      var createdEvidence =
           _extractEvidenceDetail(response) ??
           EvidenceRecord(
             id: '',
@@ -331,6 +331,12 @@ class EvidenceService {
             isPrivate: isPrivate,
             sizeBytes: sizeBytes,
           );
+
+      // Si el servidor no devolvio una URL de descarga, usar la ruta local
+      // para que la vista previa funcione correctamente.
+      if (createdEvidence.fileUrl.trim().isEmpty) {
+        createdEvidence = createdEvidence.copyWith(fileUrl: filePath);
+      }
 
       var storedEvidence = createdEvidence;
       var successMessage = _t(
@@ -411,15 +417,50 @@ class EvidenceService {
         message: _mapCreateError(error),
       );
     } catch (_) {
-      return EvidenceMutationResult(
-        success: false,
-        message: _t(
-          es: 'No se pudo crear la evidencia.',
-          en: 'The evidence could not be created.',
-          ay: 'Janiw evidencia lurañjamakiti.',
-          qu: 'Evidenciaqa mana ruwayta atikurqanchu.',
-        ),
-      );
+      // Error inesperado (ej: timeout de red). Guardar localmente como respaldo
+      // para que el SOS no pierda la evidencia grabada.
+      try {
+        final localEvidence = EvidenceRecord(
+          id: _buildLocalEvidenceId(),
+          title: title?.trim().isNotEmpty == true
+              ? title!.trim()
+              : p.basename(filePath),
+          description: description?.trim() ?? '',
+          type:
+              resolvedType ??
+              _inferEvidenceType(mimeType, filePath) ??
+              'documento',
+          createdAt: DateTime.now().toUtc().toIso8601String(),
+          takenAt: takenAt?.toUtc().toIso8601String() ?? '',
+          incidentId: null,
+          fileUrl: filePath,
+          fileName: p.basename(filePath),
+          mimeType: mimeType,
+          isPrivate: isPrivate,
+          sizeBytes: sizeBytes,
+        );
+        await upsertCachedEvidence(userId: user.id, evidence: localEvidence);
+        return EvidenceMutationResult(
+          success: true,
+          message: _t(
+            es: 'La evidencia se guardo solo en este dispositivo. Vuelve a intentarlo cuando tengas conexion.',
+            en: 'The evidence was saved only on this device. Try again when you have a connection.',
+            ay: 'Evidenciax aka dispositivon sapaki imatawa. Conexion utjirisax wasitat yant\'am.',
+            qu: 'Evidenciaqa kay dispositivollapim waqaychasqa karqan. Conexion kaptinmi yapamanta yant\'anki.',
+          ),
+          evidence: localEvidence,
+        );
+      } catch (_) {
+        return EvidenceMutationResult(
+          success: false,
+          message: _t(
+            es: 'No se pudo crear la evidencia.',
+            en: 'The evidence could not be created.',
+            ay: 'Janiw evidencia lurañjamakiti.',
+            qu: 'Evidenciaqa mana ruwayta atikurqanchu.',
+          ),
+        );
+      }
     }
   }
 

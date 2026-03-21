@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'education_story_panel.dart';
 
 class EducationTopic {
-  static const String defaultVideoAssetPath = 'assets/videos/fondo.mp4';
-
   final String id;
   final IconData icon;
   final Color color;
@@ -13,7 +11,7 @@ class EducationTopic {
   final String tag;
   final List<EducationStoryPanel> storyPanels;
   final List<String> textBlocks;
-  final String videoAssetPath;
+  final String? videoAssetPath;
 
   const EducationTopic({
     required this.id,
@@ -24,12 +22,15 @@ class EducationTopic {
     required this.tag,
     required this.storyPanels,
     required this.textBlocks,
-    this.videoAssetPath = defaultVideoAssetPath,
+    this.videoAssetPath,
   });
 
   String get videoTitle => title;
 
   String get videoDescription => description;
+
+  bool get hasVideo =>
+      videoAssetPath != null && videoAssetPath!.trim().isNotEmpty;
 
   bool matchesQuery(String query) {
     final normalizedQuery = query.trim().toLowerCase();

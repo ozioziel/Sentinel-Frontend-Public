@@ -8,6 +8,8 @@ class EducationStoryPanel {
   final String footer;
   final IconData icon;
   final Color color;
+  final String? imageAssetPath;
+  final String? imageSemanticLabel;
 
   const EducationStoryPanel({
     required this.eyebrow,
@@ -17,5 +19,7 @@ class EducationStoryPanel {
     required this.footer,
     required this.icon,
     required this.color,
+    this.imageAssetPath,
+    this.imageSemanticLabel,
   });
 }

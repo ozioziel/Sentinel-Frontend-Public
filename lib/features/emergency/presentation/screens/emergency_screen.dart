@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_design_theme.dart';
@@ -204,6 +205,137 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         setState(() => _isSendingAlert = false);
       }
     }
+  }
+
+  Future<void> _shareLocationOnly() async {
+    if (_isSendingAlert) return;
+
+    final locationUrl = await _resolveShareLocationUrl();
+    if (locationUrl == null || locationUrl.isEmpty) {
+      _showSnackBar(
+        _t(
+          es: 'No se pudo obtener la ubicacion para compartirla.',
+          en: 'The location could not be fetched to share it.',
+          ay: 'Ubicacion apnaqañataki janiw apsusiskaspati.',
+          qu: 'Ubicacion rakinaykipaq mana tarikusqachu.',
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSendingAlert = true);
+
+    try {
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          text: _buildLocationShareText(locationUrl),
+          title: _t(
+            es: 'Ubicacion actual',
+            en: 'Current location',
+            ay: 'Jichha ubicaciona',
+            qu: 'Kunan pachapi ubicacion',
+          ),
+          subject: _t(
+            es: 'Ubicacion actual',
+            en: 'Current location',
+            ay: 'Jichha ubicaciona',
+            qu: 'Kunan pachapi ubicacion',
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      if (result.status == ShareResultStatus.unavailable) {
+        _showSnackBar(
+          _t(
+            es: 'No se pudo abrir el menu para compartir la ubicacion.',
+            en: 'The share menu for the location could not be opened.',
+            ay: 'Ubicacion apnaqañ menu janiw jist\'arañjamakiti.',
+            qu: 'Ubicacion rakinapaq menuqa mana kichariyta atikurqanchu.',
+          ),
+        );
+      } else if (result.status != ShareResultStatus.dismissed) {
+        _showSnackBar(
+          _t(
+            es: 'Se abrio el menu para compartir la ubicacion.',
+            en: 'The share menu for the location was opened.',
+            ay: 'Ubicacion apnaqañ menu jist\'aratäwa.',
+            qu: 'Ubicacion rakinapaq menuqa kicharisqa karqan.',
+          ),
+        );
+      }
+    } catch (_) {
+      _showSnackBar(
+        _t(
+          es: 'No se pudo compartir la ubicacion.',
+          en: 'The location could not be shared.',
+          ay: 'Ubicacion apnaqañax janiw utjkiti.',
+          qu: 'Ubicacion rakiyta mana atikurqanchu.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingAlert = false);
+      }
+    }
+  }
+
+  Future<void> _sendTextOnlyAlert() async {
+    if (_isSendingAlert) return;
+
+    setState(() => _isSendingAlert = true);
+
+    try {
+      final result = await _alertService.sendTextAlert(
+        alertTriggeredAt: _activeAlertTriggeredAt,
+      );
+
+      if (mounted && result.message != null) {
+        _showSnackBar(result.message!);
+      }
+    } catch (_) {
+      _showSnackBar(
+        AppLanguageService.instance.tr('emergency.unexpected_alert_error'),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingAlert = false);
+      }
+    }
+  }
+
+  Future<String?> _resolveShareLocationUrl() async {
+    final activeLocationUrl = _activeLocationUrl?.trim();
+    if (activeLocationUrl != null && activeLocationUrl.isNotEmpty) {
+      return activeLocationUrl;
+    }
+
+    final locationResult = await _captureService.captureCurrentLocation();
+    for (final issue in locationResult.issues) {
+      _showSnackBar(issue);
+    }
+
+    final locationUrl = locationResult.mapsUrl?.trim();
+    if (locationUrl == null || locationUrl.isEmpty) {
+      return null;
+    }
+
+    if (mounted) {
+      setState(() => _activeLocationUrl = locationUrl);
+    } else {
+      _activeLocationUrl = locationUrl;
+    }
+
+    return locationUrl;
+  }
+
+  String _buildLocationShareText(String locationUrl) {
+    return _t(
+      es: 'Ubicacion actual:\n$locationUrl',
+      en: 'Current location:\n$locationUrl',
+      ay: 'Jichha ubicaciona:\n$locationUrl',
+      qu: 'Kunan pachapi ubicacion:\n$locationUrl',
+    );
   }
 
   Future<void> _callEmergencyContact(ContactModel contact) async {
@@ -608,10 +740,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     accentColor: AppTheme.error,
                     floatPhase: 0.2,
                     backgroundAsset: _emergencyShareMapAsset,
-                    onTap: () => _sendEmergencyAlert(
-                      locationUrl: _activeLocationUrl,
-                      alertTriggeredAt: _activeAlertTriggeredAt,
-                    ),
+                    onTap: _shareLocationOnly,
                   ),
                   const SizedBox(height: 10),
                   _EmergencyQuickActionCard(
@@ -645,10 +774,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     actionIcon: Icons.message_rounded,
                     accentColor: AppTheme.success,
                     floatPhase: 1.5,
-                    onTap: () => _sendEmergencyAlert(
-                      locationUrl: _activeLocationUrl,
-                      alertTriggeredAt: _activeAlertTriggeredAt,
-                    ),
+                    onTap: _sendTextOnlyAlert,
                   ),
                   const SizedBox(height: 24),
                   _FloatingSectionBadge(

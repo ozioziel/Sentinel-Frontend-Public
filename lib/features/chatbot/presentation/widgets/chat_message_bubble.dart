@@ -10,15 +10,12 @@ const String _imgOpen =
 const String _imgClosed =
     'assets/images/garabato_chatbot/explicando_cerrado.png';
 
-// ─── Public widget ────────────────────────────────────────────────────────────
-
 class ChatMessageBubble extends StatefulWidget {
   final String text;
   final bool isUser;
   final bool isTyping;
-
-  /// Triggers typewriter effect + mouth animation on first build (newest bot msg).
   final bool animated;
+  final VoidCallback? onAnimationComplete;
 
   const ChatMessageBubble({
     super.key,
@@ -26,6 +23,7 @@ class ChatMessageBubble extends StatefulWidget {
     required this.isUser,
     this.isTyping = false,
     this.animated = false,
+    this.onAnimationComplete,
   });
 
   @override
@@ -40,7 +38,10 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
   @override
   void initState() {
     super.initState();
-    if (!widget.isUser && widget.animated && !widget.isTyping && widget.text.isNotEmpty) {
+    if (!widget.isUser &&
+        widget.animated &&
+        !widget.isTyping &&
+        widget.text.isNotEmpty) {
       _startTypewriter();
     } else {
       _displayed = widget.text;
@@ -48,35 +49,63 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
   }
 
   void _startTypewriter() {
+    _typeTimer?.cancel();
     _isTypewriting = true;
     _displayed = '';
-    int charIndex = 0;
-    // Scale speed so total animation stays ≈ 3 s max, min 8 ms/char
+    var charIndex = 0;
+
     final ms = (3000 / widget.text.length).clamp(8.0, 24.0).toInt();
     _typeTimer = Timer.periodic(Duration(milliseconds: ms), (timer) {
-      if (!mounted) { timer.cancel(); return; }
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
       if (charIndex >= widget.text.length) {
         timer.cancel();
         setState(() => _isTypewriting = false);
+        widget.onAnimationComplete?.call();
         return;
       }
+
       charIndex++;
       setState(() => _displayed = widget.text.substring(0, charIndex));
     });
   }
 
   @override
-  void didUpdateWidget(ChatMessageBubble old) {
-    super.didUpdateWidget(old);
-    // Typing indicator → real message in same list slot
-    if (old.isTyping && !widget.isTyping && widget.text.isNotEmpty) {
+  void didUpdateWidget(ChatMessageBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.animated && !widget.animated && _isTypewriting) {
+      _typeTimer?.cancel();
+      setState(() {
+        _isTypewriting = false;
+        _displayed = widget.text;
+      });
+      return;
+    }
+
+    if (!oldWidget.animated &&
+        widget.animated &&
+        !widget.isUser &&
+        !widget.isTyping &&
+        widget.text.isNotEmpty) {
+      _startTypewriter();
+      return;
+    }
+
+    if (oldWidget.isTyping && !widget.isTyping && widget.text.isNotEmpty) {
       _typeTimer?.cancel();
       if (widget.animated) {
         _startTypewriter();
       } else {
         setState(() => _displayed = widget.text);
       }
-    } else if (!_isTypewriting && widget.text != old.text && !widget.isTyping) {
+      return;
+    }
+
+    if (!_isTypewriting && widget.text != oldWidget.text && !widget.isTyping) {
       setState(() => _displayed = widget.text);
     }
   }
@@ -103,10 +132,14 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
           Expanded(
             child: _BotBubble(
               label: widget.isTyping
-                  ? AppLanguageService.instance
-                      .pick(es: 'Escribiendo...', en: 'Typing...')
-                  : AppLanguageService.instance
-                      .pick(es: 'Asistente', en: 'Assistant'),
+                  ? AppLanguageService.instance.pick(
+                      es: 'Escribiendo...',
+                      en: 'Typing...',
+                    )
+                  : AppLanguageService.instance.pick(
+                      es: 'Asistente',
+                      en: 'Assistant',
+                    ),
               text: _displayed,
               isTyping: widget.isTyping,
             ),
@@ -117,10 +150,9 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
   }
 }
 
-// ─── User bubble ──────────────────────────────────────────────────────────────
-
 class _UserBubble extends StatelessWidget {
   final String text;
+
   const _UserBubble({required this.text});
 
   @override
@@ -139,7 +171,9 @@ class _UserBubble extends StatelessWidget {
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(4),
             ),
-            border: Border.all(color: AppTheme.primaryLight.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: AppTheme.primaryLight.withValues(alpha: 0.5),
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppTheme.primary.withValues(alpha: 0.25),
@@ -174,8 +208,6 @@ class _UserBubble extends StatelessWidget {
     );
   }
 }
-
-// ─── Bot bubble ───────────────────────────────────────────────────────────────
 
 class _BotBubble extends StatelessWidget {
   final String label;
@@ -237,8 +269,6 @@ class _BotBubble extends StatelessWidget {
   }
 }
 
-// ─── Typing dots ──────────────────────────────────────────────────────────────
-
 class _TypingDots extends StatefulWidget {
   @override
   State<_TypingDots> createState() => _TypingDotsState();
@@ -271,7 +301,6 @@ class _TypingDotsState extends State<_TypingDots>
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
-            // Each dot peaks at a different phase
             final phase = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
             final bounce = (phase < 0.5 ? phase : 1 - phase) * 2;
             return Padding(
@@ -296,10 +325,9 @@ class _TypingDotsState extends State<_TypingDots>
   }
 }
 
-// ─── Animated mascot ─────────────────────────────────────────────────────────
-
 class _MascotTalking extends StatefulWidget {
   final bool isAnimating;
+
   const _MascotTalking({required this.isAnimating});
 
   @override
@@ -317,11 +345,11 @@ class _MascotTalkingState extends State<_MascotTalking> {
   }
 
   @override
-  void didUpdateWidget(_MascotTalking old) {
-    super.didUpdateWidget(old);
-    if (widget.isAnimating && !old.isAnimating) {
+  void didUpdateWidget(_MascotTalking oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAnimating && !oldWidget.isAnimating) {
       _startMouth();
-    } else if (!widget.isAnimating && old.isAnimating) {
+    } else if (!widget.isAnimating && oldWidget.isAnimating) {
       _stopMouth();
     }
   }
@@ -349,8 +377,8 @@ class _MascotTalkingState extends State<_MascotTalking> {
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 120),
-      transitionBuilder: (child, anim) =>
-          FadeTransition(opacity: anim, child: child),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
       child: Image.asset(
         _mouthOpen ? _imgOpen : _imgClosed,
         key: ValueKey(_mouthOpen),

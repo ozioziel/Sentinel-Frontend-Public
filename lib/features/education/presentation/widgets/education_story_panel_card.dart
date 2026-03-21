@@ -17,6 +17,9 @@ class EducationStoryPanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage =
+        panel.imageAssetPath != null && panel.imageAssetPath!.trim().isNotEmpty;
+
     return CustomCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -54,118 +57,24 @@ class EducationStoryPanelCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: AspectRatio(
-              aspectRatio: 5 / 4,
+          if (hasImage)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
               child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      panel.color.withValues(alpha: 0.90),
-                      panel.color.withValues(alpha: 0.35),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -24,
-                      right: -12,
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryLight.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -20,
-                      left: -10,
-                      child: Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      bottom: 16,
-                      child: Container(
-                        width: 92,
-                        height: 118,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark.withValues(alpha: 0.24),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: AppTheme.primaryLight.withValues(
-                              alpha: 0.20,
-                            ),
-                          ),
-                        ),
-                        child: Icon(
-                          panel.icon,
-                          size: 42,
-                          color: AppTheme.textPrimary.withValues(alpha: 0.94),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 18,
-                      left: 118,
-                      right: 16,
-                      child: _ComicBubble(text: panel.bubbleText),
-                    ),
-                    Positioned(
-                      right: 16,
-                      bottom: 18,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark.withValues(alpha: 0.24),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: AppTheme.primaryLight.withValues(
-                              alpha: 0.18,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              panel.icon,
-                              size: 15,
-                              color: AppTheme.textPrimary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              context.tr('education.detail.visual_space'),
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                color: panel.color.withValues(alpha: 0.08),
+                child: Image.asset(
+                  panel.imageAssetPath!,
+                  width: double.infinity,
+                  fit: BoxFit.fitWidth,
+                  semanticLabel: panel.imageSemanticLabel ?? panel.title,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _VisualPlaceholder(panel: panel);
+                  },
                 ),
               ),
-            ),
-          ),
+            )
+          else
+            _VisualPlaceholder(panel: panel),
           const SizedBox(height: 16),
           Text(panel.title, style: AppTheme.titleLarge),
           const SizedBox(height: 8),
@@ -182,6 +91,120 @@ class EducationStoryPanelCard extends StatelessWidget {
             child: Text(panel.footer, style: AppTheme.bodyMedium),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VisualPlaceholder extends StatelessWidget {
+  final EducationStoryPanel panel;
+
+  const _VisualPlaceholder({required this.panel});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: AspectRatio(
+        aspectRatio: 5 / 4,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                panel.color.withValues(alpha: 0.90),
+                panel.color.withValues(alpha: 0.35),
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -24,
+                right: -12,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -20,
+                left: -10,
+                child: Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                bottom: 16,
+                child: Container(
+                  width: 92,
+                  height: 118,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withValues(alpha: 0.24),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppTheme.primaryLight.withValues(alpha: 0.20),
+                    ),
+                  ),
+                  child: Icon(
+                    panel.icon,
+                    size: 42,
+                    color: AppTheme.textPrimary.withValues(alpha: 0.94),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 18,
+                left: 118,
+                right: 16,
+                child: _ComicBubble(text: panel.bubbleText),
+              ),
+              Positioned(
+                right: 16,
+                bottom: 18,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withValues(alpha: 0.24),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: AppTheme.primaryLight.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(panel.icon, size: 15, color: AppTheme.textPrimary),
+                      const SizedBox(width: 6),
+                      Text(
+                        context.tr('education.detail.visual_space'),
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

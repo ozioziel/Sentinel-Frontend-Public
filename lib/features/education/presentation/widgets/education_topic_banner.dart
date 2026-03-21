@@ -15,29 +15,13 @@ class EducationTopicBanner extends StatelessWidget {
     final l10n = AppLanguageService.instance;
 
     return switch (topic.id) {
-      'derechos-sexuales' => l10n.pick(
-        es: 'los derechos sexuales',
-        en: 'sexual rights',
+      'violencia-sexual' => l10n.pick(
+        es: 'la violencia sexual',
+        en: 'sexual violence',
       ),
-      'derechos-reproductivos' => l10n.pick(
-        es: 'los derechos reproductivos',
-        en: 'reproductive rights',
-      ),
-      'prevencion-violencia' => l10n.pick(
-        es: 'la prevencion de la violencia',
-        en: 'violence prevention',
-      ),
-      'metodos-anticonceptivos' => l10n.pick(
-        es: 'los metodos anticonceptivos',
-        en: 'contraceptive methods',
-      ),
-      'riesgo' => l10n.pick(
-        es: 'que hacer si estas en riesgo',
-        en: 'what to do if you are at risk',
-      ),
-      'despues' => l10n.pick(
-        es: 'que hacer despues de una situacion de violencia',
-        en: 'what to do after a violent situation',
+      'tipos-de-violencia' => l10n.pick(
+        es: 'los tipos de violencia',
+        en: 'types of violence',
       ),
       _ => topic.title.toLowerCase(),
     };
@@ -122,10 +106,11 @@ class EducationTopicBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                _MiniPill(
-                  icon: Icons.play_circle_outline_rounded,
-                  label: context.tr('education.detail.video_chip'),
-                ),
+                if (topic.hasVideo)
+                  _MiniPill(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: context.tr('education.detail.video_chip'),
+                  ),
                 _MiniPill(
                   icon: Icons.auto_stories_rounded,
                   label: context.tr('education.detail.image_chip'),

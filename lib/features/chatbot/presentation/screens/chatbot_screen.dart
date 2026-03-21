@@ -43,6 +43,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     FocusScope.of(context).unfocus();
 
     setState(() {
+      _stopAnimatedBotMessages();
       _messages.add(_ChatMessage(text: message, isUser: true));
       _messageController.clear();
       _isBotTyping = true;
@@ -58,6 +59,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
 
       setState(() {
+        _stopAnimatedBotMessages();
         _messages.add(_ChatMessage(text: reply, isUser: false, animated: true));
         _isBotTyping = false;
       });
@@ -65,6 +67,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
 
       setState(() {
+        _stopAnimatedBotMessages();
         _messages.add(_ChatMessage(text: error.message, isUser: false, animated: true));
         _isBotTyping = false;
       });
@@ -72,6 +75,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
 
       setState(() {
+        _stopAnimatedBotMessages();
         _messages.add(
           _ChatMessage(
             text: context.tr('chatbot.errors.unexpected'),
@@ -84,6 +88,26 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
 
     _scrollToBottom();
+  }
+
+  void _stopAnimatedBotMessages() {
+    for (var index = 0; index < _messages.length; index++) {
+      final message = _messages[index];
+      if (!message.isUser && message.animated) {
+        _messages[index] = message.copyWith(animated: false);
+      }
+    }
+  }
+
+  void _finishMessageAnimation(int index) {
+    if (!mounted || index < 0 || index >= _messages.length) return;
+
+    final message = _messages[index];
+    if (!message.animated) return;
+
+    setState(() {
+      _messages[index] = message.copyWith(animated: false);
+    });
   }
 
   List<ChatbotTurn> _buildConversationTurns() {
@@ -201,6 +225,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                               text: message.text,
                               isUser: message.isUser,
                               animated: message.animated,
+                              onAnimationComplete: message.animated
+                                  ? () => _finishMessageAnimation(index)
+                                  : null,
                             );
                           },
                         ),
@@ -265,6 +292,14 @@ class _ChatMessage {
   final bool animated;
 
   const _ChatMessage({required this.text, required this.isUser, this.animated = false});
+
+  _ChatMessage copyWith({String? text, bool? isUser, bool? animated}) {
+    return _ChatMessage(
+      text: text ?? this.text,
+      isUser: isUser ?? this.isUser,
+      animated: animated ?? this.animated,
+    );
+  }
 }
 
 class _ChatStageBackground extends StatelessWidget {

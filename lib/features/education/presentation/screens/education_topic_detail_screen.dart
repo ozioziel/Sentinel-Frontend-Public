@@ -27,13 +27,15 @@ class EducationTopicDetailScreen extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   EducationTopicBanner(topic: topic),
-                  const SizedBox(height: 24),
-                  EducationSectionHeader(
-                    title: context.tr('education.detail.video_title'),
-                    subtitle: context.tr('education.detail.video_subtitle'),
-                  ),
-                  const SizedBox(height: 12),
-                  EducationVideoShowcase(topic: topic),
+                  if (topic.hasVideo) ...[
+                    const SizedBox(height: 24),
+                    EducationSectionHeader(
+                      title: context.tr('education.detail.video_title'),
+                      subtitle: context.tr('education.detail.video_subtitle'),
+                    ),
+                    const SizedBox(height: 12),
+                    EducationVideoShowcase(topic: topic),
+                  ],
                   const SizedBox(height: 24),
                   EducationSectionHeader(
                     title: context.tr('education.detail.comic_title'),

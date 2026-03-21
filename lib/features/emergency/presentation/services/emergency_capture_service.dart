@@ -70,6 +70,22 @@ class EmergencyCaptureStopResult {
   }
 }
 
+class EmergencyLocationResult {
+  final Position? position;
+  final List<String> issues;
+
+  const EmergencyLocationResult({
+    required this.position,
+    required this.issues,
+  });
+
+  String? get mapsUrl {
+    final current = position;
+    if (current == null) return null;
+    return 'https://maps.google.com/?q=${current.latitude},${current.longitude}';
+  }
+}
+
 class EmergencyCaptureService {
   CameraController? _cameraController;
   Directory? _sessionDirectory;
@@ -264,6 +280,42 @@ class EmergencyCaptureService {
       sessionDirectoryPath: sessionDirectoryPath,
       issues: issues,
     );
+  }
+
+  Future<EmergencyLocationResult> captureCurrentLocation() async {
+    final issues = <String>[];
+
+    final locationGranted = await _requestLocationPermission();
+    if (!locationGranted) {
+      issues.add(
+        _t(
+          es: 'Sin permiso de ubicacion.',
+          en: 'Location permission is missing.',
+          ay: 'Janiw ubicacion permisox utjkiti.',
+          qu: 'Ubicacion permisoqa mana kanchu.',
+        ),
+      );
+      return EmergencyLocationResult(position: null, issues: issues);
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      return EmergencyLocationResult(position: position, issues: issues);
+    } catch (_) {
+      issues.add(
+        _t(
+          es: 'No se pudo obtener la ubicacion actual.',
+          en: 'The current location could not be fetched.',
+          ay: 'Jichha ubicacion janiw apsusiskaspati.',
+          qu: 'Kunan pachapi ubicacionqa mana tarikusqachu.',
+        ),
+      );
+      return EmergencyLocationResult(position: null, issues: issues);
+    }
   }
 
   Future<bool> _requestPermission(Permission permission) async {

@@ -11,7 +11,8 @@ import '../../domain/models/education_topic.dart';
 class EducationVideoShowcase extends StatefulWidget {
   final EducationTopic topic;
 
-  const EducationVideoShowcase({super.key, required this.topic});
+  EducationVideoShowcase({super.key, required this.topic})
+    : assert(topic.videoAssetPath != null && topic.videoAssetPath != '');
 
   @override
   State<EducationVideoShowcase> createState() => _EducationVideoShowcaseState();
@@ -40,7 +41,7 @@ class _EducationVideoShowcaseState extends State<EducationVideoShowcase> {
   Future<void> _initializePreview() async {
     try {
       final controller = VideoPlayerController.asset(
-        widget.topic.videoAssetPath,
+        widget.topic.videoAssetPath!,
       );
       await controller.initialize();
       await controller.setLooping(true);
