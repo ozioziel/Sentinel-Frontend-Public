@@ -3,28 +3,33 @@ import 'package:flutter/material.dart';
 import 'app_design_theme.dart';
 
 class AppTheme {
-  static const Color espresso = Color(0xFF121212);
-  static const Color espressoDeep = Color(0xFF000000);
-  static const Color mocha = Color(0xFF1C1C1C);
-  static const Color peony = Color(0xFFF3F3F3);
-  static const Color peonySoft = Color(0xFFFFFFFF);
-  static const Color roseDust = Color(0xFF8E8E8E);
-  static const Color blush = Color(0xFFFF6B6B);
-  static const Color icedMint = Color(0xFF73D0A2);
+  static const Color espresso = Color(0xFF24101A);
+  static const Color espressoDeep = Color(0xFF13060D);
+  static const Color mocha = Color(0xFF341420);
+  static const Color peony = Color(0xFFE05B88);
+  static const Color peonySoft = Color(0xFFF7C7D8);
+  static const Color roseDust = Color(0xFFB07B90);
+  static const Color blush = Color(0xFFFF7A8F);
+  static const Color icedMint = Color(0xFF7ACEC3);
 
   static const Color primary = peony;
   static const Color primaryDark = mocha;
   static const Color primaryLight = peonySoft;
-  static const Color secondary = Color(0xFF343434);
+  static const Color secondary = Color(0xFF4A2132);
   static const Color accent = blush;
   static const Color surface = espressoDeep;
   static const Color cardBg = espresso;
-  static const Color textPrimary = peonySoft;
-  static const Color textSecondary = Color(0xFFB7B7B7);
+  static const Color textPrimary = Color(0xFFF5D5E0);
+  static const Color textSecondary = Color(0xFFC79AAD);
   static const Color success = Color(0xFF73D0A2);
-  static const Color warning = Color(0xFFE5B46E);
-  static const Color error = Color(0xFFFF6B6B);
-  static const Color divider = Color(0xFF2D2D2D);
+  static const Color warning = Color(0xFFF0B36A);
+  static const Color error = Color(0xFFFF5E7F);
+  static const Color divider = Color(0xFF593041);
+  static const LinearGradient berryBackdropGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [espressoDeep, mocha, secondary],
+  );
 
   static const TextStyle headlineLarge = TextStyle(
     fontSize: 32,
@@ -150,39 +155,40 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: AppDesignTheme.filledButtonStyle(
-          fillColor: secondary,
-          foregroundColor: textPrimary,
-          shadowColor: secondary,
+          fillColor: accent,
+          foregroundColor: espressoDeep,
+          shadowColor: accent,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: AppDesignTheme.outlinedButtonStyle(
-          fillColor: cardBg,
-          foregroundColor: textPrimary,
-          borderColor: divider,
-          shadowColor: secondary,
+          fillColor: primaryDark,
+          foregroundColor: primaryLight,
+          borderColor: primary.withValues(alpha: 0.38),
+          shadowColor: primary,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: AppDesignTheme.textButtonStyle(
-          fillColor: cardBg,
-          foregroundColor: textPrimary,
+          fillColor: primaryDark,
+          foregroundColor: primaryLight,
           shadowColor: primary,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: AppDesignTheme.iconButtonStyle(
-          fillColor: cardBg,
+          fillColor: primaryDark,
           foregroundColor: textPrimary,
-          borderColor: divider,
-          shadowColor: secondary,
+          borderColor: primary.withValues(alpha: 0.18),
+          shadowColor: primary,
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: primary,
+        backgroundColor: accent,
         foregroundColor: espressoDeep,
         shape: StadiumBorder(),
-        elevation: 0,
+        elevation: 14,
+        highlightElevation: 18,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -252,12 +258,12 @@ class AppTheme {
       dividerTheme: const DividerThemeData(color: divider, thickness: 1),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cardBg,
-        indicatorColor: primary.withValues(alpha: 0.10),
+        indicatorColor: primary.withValues(alpha: 0.16),
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           return labelLarge.copyWith(
             color: states.contains(WidgetState.selected)
-                ? textPrimary
+                ? primaryLight
                 : textSecondary,
             fontSize: 11,
           );
@@ -265,7 +271,7 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? textPrimary
+                ? primaryLight
                 : textSecondary,
             size: 22,
           );
@@ -273,7 +279,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: cardBg,
-        selectedItemColor: textPrimary,
+        selectedItemColor: primaryLight,
         unselectedItemColor: textSecondary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,

@@ -14,6 +14,9 @@ import '../services/emergency_backend_service.dart';
 import '../services/emergency_capture_service.dart';
 import '../widgets/panic_button.dart';
 
+const String _emergencyShareMapAsset =
+    'assets/images/emergency/share_location_map.png';
+
 class EmergencyScreen extends StatefulWidget {
   final bool isEmbedded;
 
@@ -41,6 +44,15 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   final EmergencyCaptureService _captureService = EmergencyCaptureService();
   final EmergencyAlertService _alertService = EmergencyAlertService();
   final EmergencyBackendService _backendService = EmergencyBackendService();
+
+  String _t({
+    required String es,
+    required String en,
+    required String ay,
+    required String qu,
+  }) {
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
+  }
 
   Future<void> _activateAlert() async {
     if (_isRecording) return;
@@ -208,7 +220,16 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     if (_incidentCreationFuture != incidentFuture) return;
 
     if (result.success && result.incidentId != null) {
-      _activeIncidentId = result.incidentId;
+      if (mounted) {
+        setState(() => _activeIncidentId = result.incidentId);
+      } else {
+        _activeIncidentId = result.incidentId;
+      }
+      if (mounted &&
+          result.message != null &&
+          result.message!.trim().isNotEmpty) {
+        _showSnackBar(result.message!);
+      }
     }
   }
 
@@ -224,7 +245,16 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     if (pendingIncidentFuture != null) {
       final result = await pendingIncidentFuture;
       if (result.success && result.incidentId != null) {
-        _activeIncidentId = result.incidentId;
+        if (mounted) {
+          setState(() => _activeIncidentId = result.incidentId);
+        } else {
+          _activeIncidentId = result.incidentId;
+        }
+        if (mounted &&
+            result.message != null &&
+            result.message!.trim().isNotEmpty) {
+          _showSnackBar(result.message!);
+        }
         return result.incidentId;
       }
     }
@@ -234,7 +264,16 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       alertTriggeredAt: alertTriggeredAt,
     );
     if (createResult.success && createResult.incidentId != null) {
-      _activeIncidentId = createResult.incidentId;
+      if (mounted) {
+        setState(() => _activeIncidentId = createResult.incidentId);
+      } else {
+        _activeIncidentId = createResult.incidentId;
+      }
+      if (mounted &&
+          createResult.message != null &&
+          createResult.message!.trim().isNotEmpty) {
+        _showSnackBar(createResult.message!);
+      }
       return createResult.incidentId;
     }
 
@@ -266,6 +305,28 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     return AppLanguageService.instance.tr(
       'emergency.capture_active',
       params: {'parts': parts.join(', ')},
+    );
+  }
+
+  String? _incidentProgressNote() {
+    if (_activeIncidentId == null || _activeIncidentId!.trim().isEmpty) {
+      return null;
+    }
+
+    if (_isProcessingEvidence) {
+      return _t(
+        es: 'El incidente SOS ya esta listo. Ahora estamos adjuntando las evidencias registradas.',
+        en: 'The SOS incident is already ready. We are now attaching the recorded evidence.',
+        ay: 'SOS incidentex wakichatawa. Jichhax qillqtata evidencianak mayachasktanwa.',
+        qu: 'SOS incidenteqa wakichisqanam kashan. Kunanqa qillqasqa evidenciakunatam hukllachkuchkan.',
+      );
+    }
+
+    return _t(
+      es: 'El incidente SOS ya fue creado. Cuando detengas la alerta, el video, el audio y la ubicacion se adjuntaran automaticamente.',
+      en: 'The SOS incident has already been created. When you stop the alert, the video, audio, and location will be attached automatically.',
+      ay: 'SOS incidentex niyaw lurataxi. Alerta saytayasax video, audio ukat ubicacionax automatico mayachasiniwa.',
+      qu: 'SOS incidenteqa nispallam ruwasqa. Alertata sayachispaykiqa, video, audio hinaspa ubicacionqa kikillantam hukllachisqa kanqa.',
     );
   }
 
@@ -363,6 +424,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final incidentProgressNote = _incidentProgressNote();
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: widget.isEmbedded
@@ -419,18 +482,36 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              _isProcessingEvidence
-                                  ? (_processingStatus ??
-                                        context.tr(
-                                          'emergency.processing_default',
-                                        ))
-                                  : _captureStatus,
-                              style: AppTheme.bodyMedium.copyWith(
-                                color: AppTheme.textPrimary.withValues(
-                                  alpha: 0.88,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _isProcessingEvidence
+                                      ? (_processingStatus ??
+                                            context.tr(
+                                              'emergency.processing_default',
+                                            ))
+                                      : _captureStatus,
+                                  style: AppTheme.bodyMedium.copyWith(
+                                    color: AppTheme.textPrimary.withValues(
+                                      alpha: 0.88,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if (incidentProgressNote != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    incidentProgressNote,
+                                    style: AppTheme.bodyMedium.copyWith(
+                                      fontSize: 12,
+                                      color: AppTheme.textPrimary.withValues(
+                                        alpha: 0.72,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           if (_isProcessingEvidence)
@@ -501,47 +582,68 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   _FloatingSectionBadge(
                     icon: Icons.auto_awesome_rounded,
                     label: context.tr('emergency.quick_actions'),
                     phase: math.pi / 3,
                   ),
                   const SizedBox(height: 16),
-                  _ActionCard(
-                    icon: Icons.share_location_rounded,
-                    iconColor: AppTheme.primaryLight,
+                  _EmergencyQuickActionCard(
                     title: context.tr('emergency.share_title'),
                     subtitle: context.tr(
                       'emergency.share_subtitle',
-                      fallback:
-                          'Incluye fecha y hora; usa WhatsApp, SMS o reintento al volver internet',
+                      fallback: 'Abrir WhatsApp o compartir tu alerta',
                     ),
+                    badgeIcon: (_activeLocationUrl?.trim().isNotEmpty ?? false)
+                        ? Icons.gps_fixed_rounded
+                        : Icons.share_location_rounded,
+                    badgeLabel:
+                        (_activeLocationUrl?.trim().isNotEmpty ?? false)
+                        ? 'GPS'
+                        : 'SOS',
+                    footerIcon: Icons.send_rounded,
+                    footerLabel: 'SMS / WA',
+                    actionIcon: Icons.share_location_rounded,
+                    accentColor: AppTheme.error,
                     floatPhase: 0.2,
+                    backgroundAsset: _emergencyShareMapAsset,
                     onTap: () => _sendEmergencyAlert(
                       locationUrl: _activeLocationUrl,
                       alertTriggeredAt: _activeAlertTriggeredAt,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _ActionCard(
-                    icon: Icons.mic_rounded,
-                    iconColor: AppTheme.error,
+                  _EmergencyQuickActionCard(
                     title: context.tr('emergency.record_title'),
-                    subtitle: context.tr('emergency.record_subtitle'),
+                    subtitle: context.tr(
+                      'emergency.record_subtitle',
+                      fallback:
+                          'La alerta SOS la registra automaticamente. Tambien puedes crear evidencias manuales desde su modulo.',
+                    ),
+                    badgeIcon: Icons.perm_camera_mic_rounded,
+                    badgeLabel: 'VIDEO / AUDIO',
+                    footerIcon: Icons.fiber_manual_record_rounded,
+                    footerLabel: 'SOS AUTO',
+                    actionIcon: Icons.perm_camera_mic_rounded,
+                    accentColor: AppTheme.warning,
                     floatPhase: 0.9,
                     onTap: _activateAlert,
                   ),
                   const SizedBox(height: 10),
-                  _ActionCard(
-                    icon: Icons.message_rounded,
-                    iconColor: AppTheme.success,
+                  _EmergencyQuickActionCard(
                     title: context.tr('emergency.help_title'),
                     subtitle: context.tr(
                       'emergency.help_subtitle',
                       fallback:
                           'WhatsApp directo, SMS sin internet y reintento si vuelve la conexion',
                     ),
+                    badgeIcon: Icons.send_rounded,
+                    badgeLabel: 'SMS / WA',
+                    footerIcon: Icons.campaign_rounded,
+                    footerLabel: 'SOS',
+                    actionIcon: Icons.message_rounded,
+                    accentColor: AppTheme.success,
                     floatPhase: 1.5,
                     onTap: () => _sendEmergencyAlert(
                       locationUrl: _activeLocationUrl,
@@ -848,6 +950,263 @@ class _ActionCard extends StatelessWidget {
             Icons.arrow_forward_ios,
             size: 14,
             color: AppTheme.textSecondary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmergencyQuickActionCard extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final IconData badgeIcon;
+  final String badgeLabel;
+  final IconData footerIcon;
+  final String footerLabel;
+  final IconData actionIcon;
+  final Color accentColor;
+  final double floatPhase;
+  final VoidCallback onTap;
+  final String? backgroundAsset;
+
+  const _EmergencyQuickActionCard({
+    required this.title,
+    this.subtitle,
+    required this.badgeIcon,
+    required this.badgeLabel,
+    required this.footerIcon,
+    required this.footerLabel,
+    required this.actionIcon,
+    required this.accentColor,
+    required this.floatPhase,
+    required this.onTap,
+    this.backgroundAsset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasBackgroundAsset =
+        backgroundAsset != null && backgroundAsset!.trim().isNotEmpty;
+
+    return Semantics(
+      button: true,
+      label: title,
+      child: CustomCard(
+        onTap: onTap,
+        padding: EdgeInsets.zero,
+        borderRadius: 30,
+        floatPhase: floatPhase,
+        floatAmplitude: 3.4,
+        backgroundColor: AppTheme.cardBg,
+        borderColor: AppTheme.divider.withValues(alpha: 0.86),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: SizedBox(
+            height: 180,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (hasBackgroundAsset)
+                  Image.asset(backgroundAsset!, fit: BoxFit.cover),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: hasBackgroundAsset
+                          ? [
+                              AppTheme.espressoDeep.withValues(alpha: 0.88),
+                              AppTheme.espresso.withValues(alpha: 0.44),
+                              accentColor.withValues(alpha: 0.22),
+                            ]
+                          : [
+                              accentColor.withValues(alpha: 0.34),
+                              AppTheme.secondary.withValues(alpha: 0.92),
+                              AppTheme.espressoDeep.withValues(alpha: 0.98),
+                            ],
+                      stops: const [0, 0.6, 1],
+                    ),
+                  ),
+                ),
+                if (!hasBackgroundAsset) ...[
+                  Positioned(
+                    top: -26,
+                    right: -18,
+                    child: Container(
+                      width: 132,
+                      height: 132,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -42,
+                    left: -26,
+                    child: Container(
+                      width: 144,
+                      height: 144,
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.24),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _MapShareTag(icon: badgeIcon, label: badgeLabel),
+                            const Spacer(),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 220),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.headlineMedium.copyWith(
+                                      fontSize: subtitle == null ? 24 : 22,
+                                      height: 0.98,
+                                      color: Colors.white,
+                                      shadows: const [
+                                        Shadow(
+                                          color: Color(0x66000000),
+                                          blurRadius: 14,
+                                          offset: Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (subtitle != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      subtitle!,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTheme.bodyMedium.copyWith(
+                                        fontSize: 12,
+                                        height: 1.28,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.82,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 10),
+                                  _MapShareTag(
+                                    icon: footerIcon,
+                                    label: footerLabel,
+                                    compact: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Container(
+                          width: 78,
+                          height: 78,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.96),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 18,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Container(
+                            margin: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.14),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              actionIcon,
+                              color: accentColor,
+                              size: 34,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapShareTag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool compact;
+
+  const _MapShareTag({
+    required this.icon,
+    required this.label,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 6 : 8,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.espressoDeep.withValues(
+          alpha: compact ? 0.74 : 0.62,
+        ),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: compact ? 15 : 16, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTheme.labelLarge.copyWith(
+              fontSize: compact ? 10.5 : 11.5,
+              color: Colors.white,
+              letterSpacing: compact ? 0.65 : 0.8,
+            ),
           ),
         ],
       ),

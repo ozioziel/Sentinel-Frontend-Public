@@ -36,18 +36,12 @@ class EducationLibraryIntroCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: const [
-                _InfoChip(
-                  icon: Icons.menu_book_rounded,
-                  label: 'Temas claros',
-                ),
+                _InfoChip(icon: Icons.menu_book_rounded, label: 'Temas claros'),
                 _InfoChip(
                   icon: Icons.auto_stories_rounded,
                   label: 'Guia visual',
                 ),
-                _InfoChip(
-                  icon: Icons.article_outlined,
-                  label: 'Texto final',
-                ),
+                _InfoChip(icon: Icons.article_outlined, label: 'Texto final'),
               ],
             ),
             const SizedBox(height: 16),
@@ -98,19 +92,19 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: AppTheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.white),
+          Icon(icon, size: 16, color: AppTheme.primaryLight),
           const SizedBox(width: 6),
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppTheme.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -132,22 +126,24 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppTheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
-            style: AppTheme.headlineMedium.copyWith(color: Colors.white),
+            style: AppTheme.headlineMedium.copyWith(
+              color: AppTheme.primaryLight,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
             style: AppTheme.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.75),
+              color: AppTheme.textPrimary.withValues(alpha: 0.75),
             ),
           ),
         ],

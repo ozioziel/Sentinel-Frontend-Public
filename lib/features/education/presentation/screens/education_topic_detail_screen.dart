@@ -7,6 +7,7 @@ import '../widgets/education_section_header.dart';
 import '../widgets/education_story_panel_card.dart';
 import '../widgets/education_text_block_card.dart';
 import '../widgets/education_topic_banner.dart';
+import '../widgets/education_video_showcase.dart';
 
 class EducationTopicDetailScreen extends StatelessWidget {
   final EducationTopic topic;
@@ -26,6 +27,13 @@ class EducationTopicDetailScreen extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   EducationTopicBanner(topic: topic),
+                  const SizedBox(height: 24),
+                  EducationSectionHeader(
+                    title: context.tr('education.detail.video_title'),
+                    subtitle: context.tr('education.detail.video_subtitle'),
+                  ),
+                  const SizedBox(height: 12),
+                  EducationVideoShowcase(topic: topic),
                   const SizedBox(height: 24),
                   EducationSectionHeader(
                     title: context.tr('education.detail.comic_title'),
@@ -50,10 +58,10 @@ class EducationTopicDetailScreen extends StatelessWidget {
                     subtitle: context.tr('education.detail.text_subtitle'),
                   ),
                   const SizedBox(height: 12),
-                  for (final block in topic.textBlocks) ...[
-                    EducationTextBlockCard(text: block, color: topic.color),
-                    const SizedBox(height: 12),
-                  ],
+                  EducationTextBlockCard(
+                    textBlocks: topic.textBlocks,
+                    color: topic.color,
+                  ),
                 ]),
               ),
             ),

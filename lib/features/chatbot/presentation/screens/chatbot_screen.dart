@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/mascot_image.dart';
 import '../services/chatbot_service.dart';
 import '../widgets/chat_message_bubble.dart';
 
@@ -284,11 +285,27 @@ class _ChatStageBackground extends StatelessWidget {
               color: AppTheme.divider.withValues(alpha: 0.55),
             ),
           ),
-          Center(
-            child: Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: AppTheme.divider.withValues(alpha: 0.24),
-              size: 72,
+          Align(
+            alignment: Alignment.topCenter,
+            child: Opacity(
+              opacity: 0.22,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 28),
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const MascotImage(
+                    width: 72,
+                    height: 72,
+                    padding: EdgeInsets.all(12),
+                    semanticsLabel: 'Mascota de apoyo',
+                  ),
+                ),
+              ),
             ),
           ),
         ],

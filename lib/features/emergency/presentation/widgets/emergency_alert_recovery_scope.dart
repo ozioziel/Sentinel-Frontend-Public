@@ -67,7 +67,7 @@ class _EmergencyAlertRecoveryScopeState
 
     _isRetrying = true;
     try {
-      final result = await _alertService.retryPendingWhatsAppAlert();
+      final result = await _alertService.retryPendingAlert();
       final message = result?.message;
       if (message == null || message.trim().isEmpty) {
         return;

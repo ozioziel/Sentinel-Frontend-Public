@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class AppDesignMotion extends StatefulWidget {
@@ -5,16 +7,82 @@ class AppDesignMotion extends StatefulWidget {
 
   const AppDesignMotion({super.key, required this.child});
 
-  static Animation<double>? maybeOf(BuildContext context) => null;
+  static Animation<double>? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_AppDesignMotionScope>()
+        ?.animation;
+  }
 
   @override
   State<AppDesignMotion> createState() => _AppDesignMotionState();
 }
 
-class _AppDesignMotionState extends State<AppDesignMotion> {
+class _AppDesignMotionState extends State<AppDesignMotion>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return widget.child;
+    return _AppDesignMotionScope(animation: _controller, child: widget.child);
+  }
+}
+
+class _AppDesignMotionScope extends InheritedNotifier<Animation<double>> {
+  const _AppDesignMotionScope({
+    required Animation<double> animation,
+    required super.child,
+  }) : super(notifier: animation);
+
+  Animation<double> get animation => notifier!;
+}
+
+class AppFloatMotion extends StatelessWidget {
+  final Widget child;
+  final double amplitude;
+  final double phase;
+
+  const AppFloatMotion({
+    super.key,
+    required this.child,
+    this.amplitude = 2.4,
+    this.phase = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (amplitude == 0) {
+      return child;
+    }
+
+    final animation = AppDesignMotion.maybeOf(context);
+    if (animation == null) {
+      return child;
+    }
+
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final angle = (animation.value * math.pi * 2) + phase;
+        final offsetY = math.sin(angle) * amplitude;
+        return Transform.translate(offset: Offset(0, offsetY), child: child);
+      },
+    );
   }
 }
 
@@ -27,6 +95,9 @@ class AppDesignTheme {
     return _buttonStyle(
       fillColor: fillColor,
       foregroundColor: foregroundColor,
+      shadowColor: shadowColor,
+      baseElevation: 12,
+      pressedElevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     );
   }
@@ -39,6 +110,9 @@ class AppDesignTheme {
     return _buttonStyle(
       fillColor: fillColor,
       foregroundColor: foregroundColor,
+      shadowColor: shadowColor,
+      baseElevation: 10,
+      pressedElevation: 5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     );
   }
@@ -52,6 +126,9 @@ class AppDesignTheme {
     return _buttonStyle(
       fillColor: fillColor,
       foregroundColor: foregroundColor,
+      shadowColor: shadowColor,
+      baseElevation: 8,
+      pressedElevation: 4,
       fillOpacity: 0.18,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       side: BorderSide(color: borderColor, width: 1.15),
@@ -66,6 +143,9 @@ class AppDesignTheme {
     return _buttonStyle(
       fillColor: fillColor,
       foregroundColor: foregroundColor,
+      shadowColor: shadowColor,
+      baseElevation: 5,
+      pressedElevation: 2,
       fillOpacity: 0.16,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       minimumSize: const Size(0, 48),
@@ -82,6 +162,9 @@ class AppDesignTheme {
     return _buttonStyle(
       fillColor: fillColor,
       foregroundColor: foregroundColor,
+      shadowColor: shadowColor,
+      baseElevation: 7,
+      pressedElevation: 3,
       fillOpacity: 0.88,
       padding: const EdgeInsets.all(12),
       minimumSize: const Size(48, 48),
@@ -94,6 +177,7 @@ class AppDesignTheme {
   static ButtonStyle _buttonStyle({
     required Color fillColor,
     required Color foregroundColor,
+    required Color shadowColor,
     required OutlinedBorder shape,
     BorderSide? side,
     EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
@@ -103,6 +187,8 @@ class AppDesignTheme {
     Size minimumSize = const Size(0, 58),
     double fillOpacity = 1,
     double iconSize = 20,
+    double baseElevation = 8,
+    double pressedElevation = 4,
   }) {
     return ButtonStyle(
       foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -119,8 +205,27 @@ class AppDesignTheme {
         return resolved;
       }),
       surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
-      elevation: const WidgetStatePropertyAll(0),
+      shadowColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return Colors.transparent;
+        }
+
+        final alpha = states.contains(WidgetState.pressed) ? 0.20 : 0.34;
+        return shadowColor.withValues(alpha: alpha);
+      }),
+      elevation: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return 0;
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return pressedElevation;
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return baseElevation + 1.5;
+        }
+        return baseElevation;
+      }),
       iconSize: WidgetStatePropertyAll(iconSize),
       minimumSize: WidgetStatePropertyAll(minimumSize),
       padding: WidgetStatePropertyAll(padding),
@@ -212,20 +317,27 @@ class AppFloatingSurface extends StatelessWidget {
       ),
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: showShadow
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : const [],
+    final glowColor =
+        Color.lerp(strokeColor, theme.colorScheme.primary, 0.28) ?? strokeColor;
+
+    return AppFloatMotion(
+      amplitude: showShadow ? amplitude : 0,
+      phase: phase,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: showShadow
+              ? [
+                  BoxShadow(
+                    color: glowColor.withValues(alpha: 0.22),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : const [],
+        ),
+        child: surfaceChild,
       ),
-      child: surfaceChild,
     );
   }
 }

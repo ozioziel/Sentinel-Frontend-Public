@@ -301,10 +301,10 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                 ),
               Text(
                 _t(
-                  es: '1. Contexto del incidente',
-                  en: '1. Incident context',
-                  ay: '1. Incidente contexto',
-                  qu: '1. Incidente contexto',
+                  es: '1. Incidente principal',
+                  en: '1. Main incident',
+                  ay: '1. Nayriri incidente',
+                  qu: '1. Hatun incidente',
                 ),
                 style: AppTheme.titleLarge,
               ),
@@ -477,12 +477,25 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               const SizedBox(height: 24),
               Text(
                 _t(
-                  es: '2. Evidencias asociadas',
-                  en: '2. Linked evidence',
-                  ay: '2. Mayachata evidencias',
-                  qu: '2. Tinkisqa evidencias',
+                  es: '2. Evidencias de este incidente',
+                  en: '2. Evidence for this incident',
+                  ay: '2. Aka incidenten evidencianakapa',
+                  qu: '2. Kay incidentepa evidenciankuna',
                 ),
                 style: AppTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              StatusBanner(
+                message: _t(
+                  es:
+                      'Este incidente es el caso principal. Aqui puedes reunir varias evidencias para mantener todo el contexto en un solo lugar.',
+                  en:
+                      'This incident is the main case. Here you can gather multiple pieces of evidence to keep the full context in one place.',
+                  ay:
+                      'Aka incidentex nayriri caso satawa. Akan walja evidencianak tantachtasma taqi contexto maya chiqana utjañapataki.',
+                  qu:
+                      'Kay incidenteqa hatun kasom kashan. Kaypim achka evidenciakunata huñunki lliw contextota hukllapi waqaychanaykipaq.',
+                ),
               ),
               const SizedBox(height: 12),
               Container(
@@ -530,13 +543,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                     Text(
                       _t(
                         es:
-                            'Puedes agregar evidencias sin incidente o moverlas desde otro caso usando PUT /evidences/:id/incident.',
+                            'Puedes traer evidencias desde tu bandeja o moverlas desde otro incidente. La idea es que este caso junte todo lo importante en un solo lugar.',
                         en:
-                            'You can add evidence without an incident or move it from another case using PUT /evidences/:id/incident.',
+                            'You can bring evidence from your inbox or move it from another incident. The goal is for this case to gather everything important in one place.',
                         ay:
-                            'Jan incidenteni evidencianak yapxatasmawa jan ukax yaqha casot apatamsa PUT /evidences/:id/incident apnaqasa.',
+                            'Bandejamat evidencianak apxatasmawa jan ukax yaqha incidentet apaqasmawa. Amtax aka cason taqi wakiskiri yatiyanak maya chiqana tantacht\'añawa.',
                         qu:
-                            'Mana incidenteyuq evidenciakunata yapayta atinki utaq huk kasomanta kuyuchiyta atinki PUT /evidences/:id/incident nisqawan.',
+                            'Bandejaykimanta evidenciakunata apamuyta atinki utaq huk incidentemanta kuyuchiyta atinki. Kay kasoqa tukuy wakisqakunata hukllapi huñunanpaqmi.',
                       ),
                       style: AppTheme.bodyMedium.copyWith(fontSize: 12),
                     ),
@@ -561,13 +574,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                         ),
                         subtitle: _t(
                           es:
-                              'Agrega evidencias existentes desde tu bandeja o mueve archivos desde otros incidentes.',
+                              'Todavia no agregaste archivos a este caso. Puedes traerlos desde tu bandeja de evidencias cuando los necesites.',
                           en:
-                              'Add existing evidence from your inbox or move files from other incidents.',
+                              'You have not added files to this case yet. You can bring them from your evidence inbox when needed.',
                           ay:
-                              'Bandejamat utjir evidencianak yapxatam jan ukax yaqha incidentenakat archivonak apaqam.',
+                              'Aka casarax janiw archivonak yapxatktati. Munasax bandejamat evidencianak apxatasmawa.',
                           qu:
-                              'Bandejaykimanta kachkaq evidenciakunata yapay utaq huk incidentekunamanta archivokunata kuyuchiy.',
+                              'Kay kasomanqa manaraq archivokunata yapanchu. Munaspaykiqa bandejaykimanta evidenciakunata apamuyta atinki.',
                         ),
                       )
                     else

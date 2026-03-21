@@ -24,52 +24,40 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
       _EducationGameQuestion(
         category: l10n.pick(es: 'Consentimiento', en: 'Consent'),
         prompt: l10n.pick(
-          es:
-              'El consentimiento debe ser claro y puede retirarse en cualquier momento.',
-          en:
-              'Consent must be clear and can be withdrawn at any time.',
+          es: 'El consentimiento debe ser claro y puede retirarse en cualquier momento.',
+          en: 'Consent must be clear and can be withdrawn at any time.',
         ),
         options: [trueOption, falseOption],
         correctIndex: 0,
         explanation: l10n.pick(
-          es:
-              'El consentimiento necesita ser libre, claro y continuo. Si cambia la decision, tambien cambia el acuerdo.',
-          en:
-              'Consent must be free, clear and ongoing. If the decision changes, the agreement changes too.',
+          es: 'El consentimiento necesita ser libre, claro y continuo. Si cambia la decision, tambien cambia el acuerdo.',
+          en: 'Consent must be free, clear and ongoing. If the decision changes, the agreement changes too.',
         ),
       ),
       _EducationGameQuestion(
         category: l10n.pick(es: 'Anticoncepcion', en: 'Contraception'),
         prompt: l10n.pick(
-          es:
-              'Informarte sobre metodos anticonceptivos solo sirve despues de tener relaciones.',
-          en:
-              'Learning about contraceptive methods only helps after having sex.',
+          es: 'Informarte sobre metodos anticonceptivos solo sirve despues de tener relaciones.',
+          en: 'Learning about contraceptive methods only helps after having sex.',
         ),
         options: [trueOption, falseOption],
         correctIndex: 1,
         explanation: l10n.pick(
-          es:
-              'Informarse antes ayuda a decidir con calma, conocer opciones y buscar apoyo profesional si hace falta.',
-          en:
-              'Learning beforehand helps you decide calmly, understand options and seek professional support if needed.',
+          es: 'Informarse antes ayuda a decidir con calma, conocer opciones y buscar apoyo profesional si hace falta.',
+          en: 'Learning beforehand helps you decide calmly, understand options and seek professional support if needed.',
         ),
       ),
       _EducationGameQuestion(
         category: l10n.pick(es: 'Apoyo', en: 'Support'),
         prompt: l10n.pick(
-          es:
-              'Pedir ayuda si sientes presion, miedo o violencia tambien es una forma de autocuidado.',
-          en:
-              'Asking for help if you feel pressure, fear or violence is also a form of self-care.',
+          es: 'Pedir ayuda si sientes presion, miedo o violencia tambien es una forma de autocuidado.',
+          en: 'Asking for help if you feel pressure, fear or violence is also a form of self-care.',
         ),
         options: [trueOption, falseOption],
         correctIndex: 0,
         explanation: l10n.pick(
-          es:
-              'Buscar apoyo en una persona segura o en un servicio de salud puede ayudarte a protegerte y tomar decisiones mas informadas.',
-          en:
-              'Seeking support from a safe person or a health service can help you protect yourself and make more informed decisions.',
+          es: 'Buscar apoyo en una persona segura o en un servicio de salud puede ayudarte a protegerte y tomar decisiones mas informadas.',
+          en: 'Seeking support from a safe person or a health service can help you protect yourself and make more informed decisions.',
         ),
       ),
     ];
@@ -214,7 +202,10 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Text(context.tr('education.games.heading'), style: AppTheme.headlineMedium),
+          Text(
+            context.tr('education.games.heading'),
+            style: AppTheme.headlineMedium,
+          ),
           const SizedBox(height: 8),
           Text(
             context.tr('education.games.description'),
@@ -315,7 +306,7 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: AppTheme.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppTheme.divider),
               ),
@@ -374,7 +365,10 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(context.tr('education.games.summary_title'), style: AppTheme.headlineMedium),
+          Text(
+            context.tr('education.games.summary_title'),
+            style: AppTheme.headlineMedium,
+          ),
           const SizedBox(height: 8),
           Text(
             context.tr(
@@ -392,7 +386,7 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: AppTheme.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppTheme.divider),
               ),
@@ -469,7 +463,7 @@ class _EducationGamesScreenState extends State<EducationGamesScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: AppTheme.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppTheme.divider),
             ),
@@ -533,7 +527,7 @@ class _AnswerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var borderColor = AppTheme.divider;
-    var backgroundColor = Colors.white.withValues(alpha: 0.03);
+    var backgroundColor = AppTheme.primary.withValues(alpha: 0.06);
     var labelColor = AppTheme.textPrimary;
 
     if (isCorrect) {
@@ -567,7 +561,7 @@ class _AnswerCard extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: AppTheme.primary.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -600,9 +594,9 @@ class _HeaderChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppTheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -627,7 +621,7 @@ class _HeaderStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppTheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.divider),
       ),

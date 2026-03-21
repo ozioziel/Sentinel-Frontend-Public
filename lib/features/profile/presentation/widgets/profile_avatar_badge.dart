@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../models/profile_avatar_option.dart';
 
 class ProfileAvatarBadge extends StatelessWidget {
@@ -37,7 +38,7 @@ class ProfileAvatarBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(option.icon, color: Colors.white, size: iconSize),
+      child: Icon(option.icon, color: AppTheme.textPrimary, size: iconSize),
     );
   }
 }

@@ -173,7 +173,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ? FloatingActionButton(
                 onPressed: _openForm,
                 backgroundColor: AppTheme.primary,
-                child: const Icon(Icons.add, color: Colors.white),
+                child: const Icon(Icons.add, color: AppTheme.surface),
               )
             : null,
       ),

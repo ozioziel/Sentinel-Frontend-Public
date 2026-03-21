@@ -122,15 +122,7 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1A1A2E),
-                  Color(0xFF16213E),
-                  Color(0xFF0F3460),
-                ],
-              ),
+              gradient: AppTheme.berryBackdropGradient,
             ),
           ),
           Positioned(
@@ -190,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           child: const Icon(
                             Icons.shield_rounded,
-                            color: Colors.white,
+                            color: AppTheme.surface,
                             size: 40,
                           ),
                         ),

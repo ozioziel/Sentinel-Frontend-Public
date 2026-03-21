@@ -521,7 +521,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: selected
-                                    ? Colors.white
+                                    ? AppTheme.surface
                                     : AppTheme.textSecondary,
                               ),
                             ),

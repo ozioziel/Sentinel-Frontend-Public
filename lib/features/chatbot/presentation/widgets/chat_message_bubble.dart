@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/mascot_image.dart';
 
 class ChatMessageBubble extends StatelessWidget {
   final String text;
@@ -38,30 +39,30 @@ class ChatMessageBubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(right: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _AssistantAvatar(isTyping: isTyping),
-          const SizedBox(width: 10),
-          Flexible(
-            child: _MessageCard(
-              label: isTyping
-                  ? AppLanguageService.instance.pick(
-                      es: 'Asistente escribiendo...',
-                      en: 'Assistant is typing...',
-                    )
-                  : AppLanguageService.instance.pick(
-                      es: 'Asistente',
-                      en: 'Assistant',
-                    ),
-              text: text,
-              isTyping: isTyping,
-              backgroundColor: AppTheme.cardBg,
-              borderColor: AppTheme.divider,
-              textColor: AppTheme.textPrimary,
-              labelColor: AppTheme.textSecondary,
-              maxWidth: 280,
-            ),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            child: _AssistantAvatar(isTyping: isTyping),
+          ),
+          _MessageCard(
+            label: isTyping
+                ? AppLanguageService.instance.pick(
+                    es: 'Asistente escribiendo...',
+                    en: 'Assistant is typing...',
+                  )
+                : AppLanguageService.instance.pick(
+                    es: 'Asistente',
+                    en: 'Assistant',
+                  ),
+            text: text,
+            isTyping: isTyping,
+            backgroundColor: AppTheme.cardBg,
+            borderColor: AppTheme.divider,
+            textColor: AppTheme.textPrimary,
+            labelColor: AppTheme.textSecondary,
+            maxWidth: 280,
           ),
         ],
       ),
@@ -153,25 +154,28 @@ class _AssistantAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 70,
+      width: 78,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 58,
-            height: 58,
+            width: 62,
+            height: 62,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              color: AppTheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(
+                color: isTyping
+                    ? AppTheme.primary.withValues(alpha: 0.28)
+                    : AppTheme.divider,
+              ),
             ),
-            child: Icon(
-              isTyping
-                  ? Icons.more_horiz_rounded
-                  : Icons.support_agent_rounded,
-              color: AppTheme.primary,
-              size: 28,
+            child: const MascotImage(
+              width: 42,
+              height: 42,
+              padding: EdgeInsets.all(8),
+              semanticsLabel: 'Mascota de apoyo',
             ),
           ),
           const SizedBox(height: 4),

@@ -78,7 +78,7 @@ class EducationStoryPanelCard extends StatelessWidget {
                         width: 96,
                         height: 96,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.10),
+                          color: AppTheme.primaryLight.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -90,7 +90,7 @@ class EducationStoryPanelCard extends StatelessWidget {
                         width: 88,
                         height: 88,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.08),
+                          color: AppTheme.primaryDark.withValues(alpha: 0.18),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -102,16 +102,18 @@ class EducationStoryPanelCard extends StatelessWidget {
                         width: 92,
                         height: 118,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.16),
+                          color: AppTheme.primaryDark.withValues(alpha: 0.24),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: AppTheme.primaryLight.withValues(
+                              alpha: 0.20,
+                            ),
                           ),
                         ),
                         child: Icon(
                           panel.icon,
                           size: 42,
-                          color: Colors.white.withValues(alpha: 0.92),
+                          color: AppTheme.textPrimary.withValues(alpha: 0.94),
                         ),
                       ),
                     ),
@@ -130,21 +132,27 @@ class EducationStoryPanelCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
+                          color: AppTheme.primaryDark.withValues(alpha: 0.24),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: AppTheme.primaryLight.withValues(
+                              alpha: 0.18,
+                            ),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(panel.icon, size: 15, color: Colors.white),
+                            Icon(
+                              panel.icon,
+                              size: 15,
+                              color: AppTheme.textPrimary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               context.tr('education.detail.visual_space'),
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppTheme.textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -189,8 +197,11 @@ class _ComicBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.textPrimary.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.primaryLight.withValues(alpha: 0.14),
+        ),
       ),
       child: Text(
         text,

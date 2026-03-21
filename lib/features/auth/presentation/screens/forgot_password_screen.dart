@@ -95,15 +95,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1A1A2E),
-                  Color(0xFF16213E),
-                  Color(0xFF0F3460),
-                ],
-              ),
+              gradient: AppTheme.berryBackdropGradient,
             ),
           ),
           Positioned(
@@ -168,7 +160,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       child: const Icon(
                         Icons.mark_email_read_outlined,
-                        color: Colors.white,
+                        color: AppTheme.surface,
                         size: 34,
                       ),
                     ),
@@ -194,7 +186,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           : TextInputAction.done,
                       style: AppTheme.bodyLarge,
                       decoration: InputDecoration(
-                        labelText: context.tr('auth.forgot_password.email_label'),
+                        labelText: context.tr(
+                          'auth.forgot_password.email_label',
+                        ),
                         prefixIcon: const Icon(
                           Icons.alternate_email_rounded,
                           color: AppTheme.textSecondary,
@@ -203,7 +197,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       validator: (value) {
                         if (!AuthIdentityMapper.isValidEmail(value ?? '')) {
-                          return context.tr('auth.forgot_password.email_invalid');
+                          return context.tr(
+                            'auth.forgot_password.email_invalid',
+                          );
                         }
                         return null;
                       },
@@ -216,12 +212,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         textInputAction: TextInputAction.done,
                         style: AppTheme.bodyLarge,
                         decoration: InputDecoration(
-                          labelText: context.tr('auth.forgot_password.code_label'),
+                          labelText: context.tr(
+                            'auth.forgot_password.code_label',
+                          ),
                           prefixIcon: const Icon(
                             Icons.pin_outlined,
                             color: AppTheme.textSecondary,
                           ),
-                          hintText: context.tr('auth.forgot_password.code_hint'),
+                          hintText: context.tr(
+                            'auth.forgot_password.code_hint',
+                          ),
                         ),
                         validator: (value) {
                           if (!_codeRequested) {
@@ -229,7 +229,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           }
 
                           if ((value ?? '').trim().length != 6) {
-                            return context.tr('auth.forgot_password.code_invalid');
+                            return context.tr(
+                              'auth.forgot_password.code_invalid',
+                            );
                           }
                           return null;
                         },
@@ -243,9 +245,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppTheme.divider),
                         ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
                               context.tr('auth.forgot_password.demo_title'),
                               style: AppTheme.titleLarge,

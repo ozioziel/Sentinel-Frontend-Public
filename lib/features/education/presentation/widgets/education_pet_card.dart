@@ -181,7 +181,7 @@ class _MascotFigure extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
+                color: AppTheme.primaryLight.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
             ),
@@ -251,7 +251,7 @@ class _PetStatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppTheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.divider),
       ),
@@ -284,7 +284,7 @@ class _XpBar extends StatelessWidget {
     return Container(
       height: 12,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: AppTheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppTheme.divider),
       ),

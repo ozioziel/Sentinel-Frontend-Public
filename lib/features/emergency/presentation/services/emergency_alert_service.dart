@@ -20,7 +20,10 @@ class EmergencyActionResult {
 }
 
 class EmergencyAlertService {
-  static const String _pendingWhatsAppAlertKey = 'pending_whatsapp_alert_v1';
+  static const String _pendingAlertKey = 'pending_whatsapp_alert_v1';
+  static const String _pendingWhatsAppAlertKey = _pendingAlertKey;
+  static const String _pendingAlertChannelWhatsApp = 'whatsapp';
+  static const String _pendingAlertChannelSms = 'sms';
 
   final AuthService _authService;
   final ContactsService _contactsService;
@@ -84,13 +87,78 @@ class EmergencyAlertService {
     );
     final hasInternet = await _hasInternetLikeConnection();
 
+    if (contacts.phones.length > 1) {
+      final smsOpened = await _openSmsComposer(
+        phones: contacts.phones,
+        message: message,
+      );
+      if (smsOpened) {
+        await _clearPendingAlert();
+        return EmergencyActionResult(
+          success: true,
+          message: _t(
+            es:
+                'Se preparo un SMS de emergencia con fecha, hora y ubicacion para ${contacts.phones.length} contactos.',
+            en:
+                'An emergency SMS with date, time and location was prepared for ${contacts.phones.length} contacts.',
+            ay:
+                'Uru, hora ukat ubicacionamp emergencia SMS ukax ${contacts.phones.length} contacto ukataki wakicht\'atawa.',
+            qu:
+                'P\'unchaw, hora, ubicacionwan emergencia SMSqa ${contacts.phones.length} contactospaq wakichisqa kashan.',
+          ),
+        );
+      }
+
+      if (hasInternet) {
+        final shared = await _shareAlertMessage(message: message);
+        if (shared) {
+          await _clearPendingAlert();
+          return EmergencyActionResult(
+            success: true,
+            message: _t(
+              es:
+                  'No se pudo abrir el SMS grupal. Se preparo la alerta para compartirla con ${contacts.phones.length} contactos.',
+              en:
+                  'The group SMS could not be opened. The alert was prepared to share with ${contacts.phones.length} contacts.',
+              ay:
+                  'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta wakicht\'atawa ${contacts.phones.length} contacto ukamp apnaqañataki.',
+              qu:
+                  'SMS grupal kichariyta mana atikurqanchu. Alertaqa wakichisqa kashan ${contacts.phones.length} contactoswan rakinapaq.',
+            ),
+          );
+        }
+      }
+
+      await _savePendingAlert(
+        _PendingAlert(
+          phones: contacts.phones,
+          recipientLabel: contacts.recipientLabel,
+          message: message,
+          alertTriggeredAtIso: triggeredAt.toIso8601String(),
+          preferredChannel: _pendingAlertChannelSms,
+        ),
+      );
+
+      return EmergencyActionResult(
+        success: true,
+        message: _t(
+          es:
+              'No se pudo abrir el SMS grupal. La alerta quedo guardada y se intentara nuevamente para ${contacts.recipientLabel}.',
+          en:
+              'The group SMS could not be opened. The alert was saved and will be retried for ${contacts.recipientLabel}.',
+          ay:
+              'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta imatawa ukat ${contacts.recipientLabel} ukataki mayamp yant\'ataniwa.',
+          qu:
+              'SMS grupal kichariyta mana atikurqanchu. Alertaqa waqaychasqa kashan hinaspa ${contacts.recipientLabel}paq yapamanta yachasqa kanqa.',
+        ),
+      );
+    }
+
     if (hasInternet) {
-      final opened = contacts.phones.length == 1
-          ? await _openWhatsAppMessage(
-              phone: contacts.primaryPhone,
-              message: message,
-            )
-          : await _shareAlertMessage(message: message);
+      final opened = await _openWhatsAppMessage(
+        phone: contacts.primaryPhone,
+        message: message,
+      );
 
       if (opened) {
         await _clearPendingWhatsAppAlert();
@@ -223,6 +291,36 @@ class EmergencyAlertService {
             '${pendingAlert.contactName} ukatak WhatsApp suyt\'ata alertax mayamp qalltatawa.',
         qu:
             '${pendingAlert.contactName}paq suyasqa WhatsApp alerta yapamanta qallarirqan.',
+      ),
+    );
+  }
+
+  Future<EmergencyActionResult?> retryPendingAlert() async {
+    final pendingAlert = await _loadPendingAlert();
+    if (pendingAlert == null) {
+      return null;
+    }
+
+    final opened = pendingAlert.preferredChannel == _pendingAlertChannelSms
+        ? await _openSmsComposer(
+            phones: pendingAlert.phones,
+            message: pendingAlert.message,
+          )
+        : await _retryPendingWhatsAppAlertForRecipient(pendingAlert);
+    if (!opened) {
+      return null;
+    }
+
+    await _clearPendingAlert();
+    return EmergencyActionResult(
+      success: true,
+      message: _t(
+        es: 'Se reanudo la alerta pendiente para ${pendingAlert.recipientLabel}.',
+        en: 'The pending alert for ${pendingAlert.recipientLabel} resumed.',
+        ay:
+            '${pendingAlert.recipientLabel} ukatak suyt\'ata alertax mayamp qalltatawa.',
+        qu:
+            '${pendingAlert.recipientLabel}paq suyasqa alerta yapamanta qallarirqan.',
       ),
     );
   }
@@ -478,12 +576,16 @@ class EmergencyAlertService {
                 ay: 'nayriri contactomama',
                 qu: 'aswan umalliq contactoyki',
               ));
+    final recipientLabel = phones.length == 1
+        ? primaryContactName
+        : _describeRecipients(phones);
 
     return _EmergencyContactsSnapshot(
       phones: phones,
       emails: emails,
       primaryPhone: primaryPhone,
       primaryContactName: primaryContactName,
+      recipientLabel: recipientLabel,
     );
   }
 
@@ -849,6 +951,50 @@ class EmergencyAlertService {
     return results.any((result) => result != ConnectivityResult.none);
   }
 
+  Future<bool> _retryPendingWhatsAppAlertForRecipient(
+    _PendingAlert pendingAlert,
+  ) async {
+    final phone = pendingAlert.primaryPhone;
+    if (phone.isEmpty) {
+      return false;
+    }
+
+    final hasInternet = await _hasInternetLikeConnection();
+    if (!hasInternet) {
+      return false;
+    }
+
+    return _openWhatsAppMessage(
+      phone: phone,
+      message: pendingAlert.message,
+    );
+  }
+
+  Future<void> _savePendingAlert(_PendingAlert alert) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pendingAlertKey, jsonEncode(alert.toJson()));
+  }
+
+  Future<_PendingAlert?> _loadPendingAlert() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_pendingAlertKey);
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      return _PendingAlert.fromJson(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _clearPendingAlert() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingAlertKey);
+  }
+
   Future<void> _savePendingWhatsAppAlert(_PendingWhatsAppAlert alert) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingWhatsAppAlertKey, jsonEncode(alert.toJson()));
@@ -1009,13 +1155,87 @@ class _EmergencyContactsSnapshot {
   final List<String> emails;
   final String primaryPhone;
   final String primaryContactName;
+  final String recipientLabel;
 
   const _EmergencyContactsSnapshot({
     required this.phones,
     required this.emails,
     required this.primaryPhone,
     required this.primaryContactName,
+    required this.recipientLabel,
   });
+}
+
+class _PendingAlert {
+  final List<String> phones;
+  final String recipientLabel;
+  final String message;
+  final String alertTriggeredAtIso;
+  final String preferredChannel;
+
+  const _PendingAlert({
+    required this.phones,
+    required this.recipientLabel,
+    required this.message,
+    required this.alertTriggeredAtIso,
+    required this.preferredChannel,
+  });
+
+  String get primaryPhone => phones.isNotEmpty ? phones.first : '';
+
+  Map<String, dynamic> toJson() => {
+    'phones': phones,
+    'recipientLabel': recipientLabel,
+    'message': message,
+    'alertTriggeredAtIso': alertTriggeredAtIso,
+    'preferredChannel': preferredChannel,
+  };
+
+  factory _PendingAlert.fromJson(Map<String, dynamic> json) {
+    final phonesFromJson =
+        (json['phones'] as List<dynamic>?)
+            ?.map(_readString)
+            .where((phone) => phone.trim().isNotEmpty)
+            .toList() ??
+        <String>[];
+    final legacyPhone = _readString(json['phone']);
+    final phones = phonesFromJson.isNotEmpty
+        ? phonesFromJson
+        : (legacyPhone.trim().isEmpty ? <String>[] : <String>[legacyPhone]);
+    final recipientLabelFallback = _readString(
+      json['contactName'],
+      fallback: AppLanguageService.instance.pick(
+        es: phones.length > 1
+            ? '${phones.length} contactos de emergencia'
+            : 'tu contacto prioritario',
+        en: phones.length > 1
+            ? '${phones.length} emergency contacts'
+            : 'your priority contact',
+        ay: phones.length > 1
+            ? '${phones.length} emergencia contactos'
+            : 'nayriri contactomama',
+        qu: phones.length > 1
+            ? '${phones.length} emergencia contactos'
+            : 'aswan umalliq contactoyki',
+      ),
+    );
+
+    return _PendingAlert(
+      phones: phones,
+      recipientLabel: _readString(
+        json['recipientLabel'],
+        fallback: recipientLabelFallback,
+      ),
+      message: _readString(json['message']),
+      alertTriggeredAtIso: _readString(json['alertTriggeredAtIso']),
+      preferredChannel: _readString(
+        json['preferredChannel'],
+        fallback: phones.length > 1
+            ? EmergencyAlertService._pendingAlertChannelSms
+            : EmergencyAlertService._pendingAlertChannelWhatsApp,
+      ),
+    );
+  }
 }
 
 class _PendingWhatsAppAlert {

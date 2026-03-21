@@ -87,6 +87,10 @@ class EducationTopicCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _ContentChip(
+                  icon: Icons.play_circle_outline_rounded,
+                  label: context.tr('education.detail.video_chip'),
+                ),
+                _ContentChip(
                   icon: Icons.auto_stories_rounded,
                   label: context.tr('education.detail.comic_chip'),
                 ),
@@ -129,9 +133,9 @@ class _ContentChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppTheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

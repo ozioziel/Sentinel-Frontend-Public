@@ -78,25 +78,36 @@ class EmergencyBackendService {
         message: _t(
           es: 'No hay una sesion activa para registrar la alerta.',
           en: 'There is no active session to register the alert.',
-          ay: 'Janiw alerta qillqantañatakix sesion activa utjkiti.',
+          ay: 'Janiw alerta qillqantatanakax sesion activa utjkiti.',
           qu: 'Alerta qillqanapaq sesion activaqa mana kanchu.',
         ),
       );
     }
 
+    final triggeredAt = alertTriggeredAt ?? DateTime.now();
+    final incidentTitle = _t(
+      es: 'Alerta SOS',
+      en: 'SOS Alert',
+      ay: 'SOS Alerta',
+      qu: 'SOS Alerta',
+    );
+    final incidentDescription = _buildIncidentDescription(
+      locationUrl,
+      alertTriggeredAt: triggeredAt,
+    );
+    final incidentDate = triggeredAt.toUtc().toIso8601String();
+    final incidentDraft = IncidentRecord(
+      id: '',
+      title: incidentTitle,
+      description: incidentDescription,
+      type: 'sos',
+      status: 'registrado',
+      riskLevel: 'critico',
+      location: locationUrl ?? '',
+      occurredAt: incidentDate,
+    );
+
     try {
-      final triggeredAt = alertTriggeredAt ?? DateTime.now();
-      final incidentTitle = _t(
-        es: 'Alerta SOS',
-        en: 'SOS Alert',
-        ay: 'SOS Alerta',
-        qu: 'SOS Alerta',
-      );
-      final incidentDescription = _buildIncidentDescription(
-        locationUrl,
-        alertTriggeredAt: triggeredAt,
-      );
-      final incidentDate = triggeredAt.toUtc().toIso8601String();
       final response = await _apiClient.postJson(
         '/incidents',
         accessToken: user.accessToken,
@@ -111,48 +122,69 @@ class EmergencyBackendService {
         },
       );
 
-      final data = _extractDataMap(response);
-      final incidentId = _readString(data['id']);
-      if (incidentId.isEmpty) {
+      final createdIncident =
+          _extractIncidentDetail(response) ?? incidentDraft;
+      final storedIncident = createdIncident.id.trim().isEmpty
+          ? incidentDraft.copyWith(id: _buildLocalIncidentId())
+          : createdIncident;
+
+      await _incidentService.upsertCachedIncident(
+        userId: user.id,
+        incident: storedIncident,
+      );
+
+      if (createdIncident.id.trim().isEmpty) {
         return EmergencyIncidentResult(
-          success: false,
+          success: true,
+          incidentId: storedIncident.id,
           message: _t(
-            es: 'El servidor no devolvio un incidente valido.',
-            en: 'The server did not return a valid incident.',
-            ay: 'Servidorax janiw valido incident kutt\'aykiti.',
-            qu: 'Servidorqa mana allin incidente kutichirqanchu.',
+            es:
+                'La alerta SOS se guardo localmente porque el servidor no devolvio un incidente valido.',
+            en:
+                'The SOS alert was saved locally because the server did not return a valid incident.',
+            ay:
+                'SOS alertax localan imatawa kunatix servidorax janiw valido incidente kuttaykiti.',
+            qu:
+                'SOS alertaqa localpim waqaychasqa karqan, servidorqa mana allin incidente kutichirqanchu.',
           ),
         );
       }
 
+      return EmergencyIncidentResult(
+        success: true,
+        incidentId: storedIncident.id,
+      );
+    } on ApiException catch (error) {
+      final localIncident = incidentDraft.copyWith(id: _buildLocalIncidentId());
       await _incidentService.upsertCachedIncident(
         userId: user.id,
-        incident: IncidentRecord(
-          id: incidentId,
-          title: incidentTitle,
-          description: incidentDescription,
-          type: 'sos',
-          status: 'registrado',
-          riskLevel: 'critico',
-          location: locationUrl ?? '',
-          occurredAt: incidentDate,
-        ),
+        incident: localIncident,
       );
 
-      return EmergencyIncidentResult(success: true, incidentId: incidentId);
-    } on ApiException catch (error) {
       return EmergencyIncidentResult(
-        success: false,
-        message: _mapIncidentError(error),
+        success: true,
+        incidentId: localIncident.id,
+        message: _buildLocalIncidentFallbackMessage(error),
       );
     } catch (_) {
+      final localIncident = incidentDraft.copyWith(id: _buildLocalIncidentId());
+      await _incidentService.upsertCachedIncident(
+        userId: user.id,
+        incident: localIncident,
+      );
+
       return EmergencyIncidentResult(
-        success: false,
+        success: true,
+        incidentId: localIncident.id,
         message: _t(
-          es: 'No se pudo registrar la alerta en el servidor.',
-          en: 'The alert could not be registered on the server.',
-          ay: 'Janiw alerta servidoran qillqantañjamakiti.',
-          qu: 'Alertaqa servidorman mana qillqayta atikurqanchu.',
+          es:
+              'La alerta SOS se guardo localmente en este dispositivo mientras vuelve la conexion con el servidor.',
+          en:
+              'The SOS alert was saved locally on this device while the server connection returns.',
+          ay:
+              'SOS alertax aka dispositivon localan imatawa servidorampi mayachasiy kutinipkama.',
+          qu:
+              'SOS alertaqa kay dispositivopi localpim waqaychasqa karqan servidorman tinkanakuy kutimunankama.',
         ),
       );
     }
@@ -171,7 +203,7 @@ class EmergencyBackendService {
         message: _t(
           es: 'No habia archivos para subir al servidor.',
           en: 'There were no files to upload to the server.',
-          ay: 'Janiw servidorar apkatañatakix archivos utjkiti.',
+          ay: 'Janiw servidorar apkatanatakix archivos utjkiti.',
           qu: 'Servidorman wicharinapaq archivosqa mana karqanchu.',
         ),
       );
@@ -185,7 +217,7 @@ class EmergencyBackendService {
         message: _t(
           es: 'No hay una sesion activa para subir evidencia.',
           en: 'There is no active session to upload evidence.',
-          ay: 'Janiw evidencia apkatañatakix sesion activa utjkiti.',
+          ay: 'Janiw evidencia apkatanatakix sesion activa utjkiti.',
           qu: 'Evidencia wicharinapaq sesion activaqa mana kanchu.',
         ),
       );
@@ -215,8 +247,7 @@ class EmergencyBackendService {
           _t(
             es: 'No se pudo reconocer el tipo de ${p.basename(filePath)}.',
             en: 'The type of ${p.basename(filePath)} could not be recognized.',
-            ay:
-                '${p.basename(filePath)} ukax kuna kasta uk janiw uñt\'ayaskiti.',
+            ay: '${p.basename(filePath)} ukax kuna kasta uk janiw untayaskiti.',
             qu:
                 '${p.basename(filePath)} ima kastachus mana reqsiyta atikurqanchu.',
           ),
@@ -264,7 +295,7 @@ class EmergencyBackendService {
                 en:
                     '${p.basename(filePath)} was uploaded, but it could not be linked to the incident.',
                 ay:
-                    '${p.basename(filePath)} apkatawa, ukampis janiw incidenter mayachañjamakiti.',
+                    '${p.basename(filePath)} apkatawa, ukampis janiw incidenter mayachatanjamakiti.',
                 qu:
                     '${p.basename(filePath)} wicharisqa karqan, ichaqa incidentewan mana tinkanachiyta atikurqanchu.',
               ),
@@ -284,7 +315,7 @@ class EmergencyBackendService {
           _t(
             es: 'No se pudo subir ${p.basename(filePath)}.',
             en: '${p.basename(filePath)} could not be uploaded.',
-            ay: 'Janiw ${p.basename(filePath)} apkatañjamakiti.',
+            ay: 'Janiw ${p.basename(filePath)} apkatanjamakiti.',
             qu: '${p.basename(filePath)} mana wichariyta atikurqanchu.',
           ),
         );
@@ -316,7 +347,7 @@ class EmergencyBackendService {
         ay:
             '$appName app tuqit SOS alertax activatawa. Uru ukat hora: $formattedTimestamp.',
         qu:
-            '$appName appmanta SOS alerta qallarichisqa karqan. P\'unchawwan horawan: $formattedTimestamp.',
+            '$appName appmanta SOS alerta qallarichisqa karqan. Punchawwan horawan: $formattedTimestamp.',
       );
     }
 
@@ -328,7 +359,7 @@ class EmergencyBackendService {
       ay:
           '$appName app tuqit SOS alertax activatawa. Uru ukat hora: $formattedTimestamp. Yatiyata ubicacion: $locationUrl',
       qu:
-          '$appName appmanta SOS alerta qallarichisqa karqan. P\'unchawwan horawan: $formattedTimestamp. Willasqa ubicacion: $locationUrl',
+          '$appName appmanta SOS alerta qallarichisqa karqan. Punchawwan horawan: $formattedTimestamp. Willasqa ubicacion: $locationUrl',
     );
   }
 
@@ -373,25 +404,25 @@ class EmergencyBackendService {
       'video' => _t(
         es: 'Video registrado durante la alerta SOS.',
         en: 'Video recorded during the SOS alert.',
-        ay: 'SOS alerta pachan qillqt\'ata video.',
+        ay: 'SOS alerta pachan qillqtata video.',
         qu: 'SOS alerta pachapi qillqasqa video.',
       ),
       'audio' => _t(
         es: 'Audio registrado durante la alerta SOS.',
         en: 'Audio recorded during the SOS alert.',
-        ay: 'SOS alerta pachan qillqt\'ata audio.',
+        ay: 'SOS alerta pachan qillqtata audio.',
         qu: 'SOS alerta pachapi qillqasqa audio.',
       ),
       'imagen' => _t(
         es: 'Imagen registrada durante la alerta SOS.',
         en: 'Image recorded during the SOS alert.',
-        ay: 'SOS alerta pachan qillqt\'ata imagen.',
+        ay: 'SOS alerta pachan qillqtata imagen.',
         qu: 'SOS alerta pachapi qillqasqa imagen.',
       ),
       _ => _t(
         es: 'Evidencia registrada durante la alerta SOS.',
         en: 'Evidence recorded during the SOS alert.',
-        ay: 'SOS alerta pachan qillqt\'ata evidencia.',
+        ay: 'SOS alerta pachan qillqtata evidencia.',
         qu: 'SOS alerta pachapi qillqasqa evidencia.',
       ),
     };
@@ -456,7 +487,7 @@ class EmergencyBackendService {
       return _t(
         es: 'No se pudo subir evidencia al servidor.',
         en: 'The evidence could not be uploaded to the server.',
-        ay: 'Janiw evidencia servidorar apkatañjamakiti.',
+        ay: 'Janiw evidencia servidorar apkatanjamakiti.',
         qu: 'Evidenciaqa servidorman mana wichariyta atikurqanchu.',
       );
     }
@@ -465,7 +496,7 @@ class EmergencyBackendService {
       return '${_t(
         es: 'No se pudo subir la evidencia al servidor.',
         en: 'The evidence could not be uploaded to the server.',
-        ay: 'Janiw evidencia servidorar apkatañjamakiti.',
+        ay: 'Janiw evidencia servidorar apkatanjamakiti.',
         qu: 'Evidenciaqa servidorman mana wichariyta atikurqanchu.',
       )} ${issues.first}';
     }
@@ -495,32 +526,46 @@ class EmergencyBackendService {
     )} ${issues.first}';
   }
 
-  String _mapIncidentError(ApiException error) {
+  String _buildLocalIncidentFallbackMessage(ApiException error) {
     final lowerMessage = error.message.toLowerCase();
     final appName = AppBrandingService.instance.displayName;
 
     if (lowerMessage.contains('no se pudo conectar con el servidor')) {
       return _t(
-        es: 'No se pudo conectar con $appName para registrar la alerta.',
-        en: 'Could not connect to $appName to register the alert.',
-        ay: 'Janiw alerta qillqantañatakix $appName ukamp mayachasiñjamakiti.',
+        es:
+            'No se pudo conectar con $appName, pero la alerta SOS se guardo localmente.',
+        en:
+            'Could not connect to $appName, but the SOS alert was saved locally.',
+        ay:
+            'Janiw $appName ukamp mayachasiyjamakiti, ukampis SOS alertax localan imatawa.',
         qu:
-            '${appName}wan alerta qillqanapaq mana tinkanakuyta atikurqanchu.',
+            '${appName}wan mana tinkanakuyta atikurqanchu, ichaqa SOS alertaqa localpim waqaychasqa karqan.',
       );
     }
 
     if (lowerMessage.contains('perfil no encontrado')) {
       return _t(
-        es: 'La cuenta esta autenticada, pero no tiene perfil en el backend.',
-        en: 'The account is authenticated, but it does not have a backend profile.',
+        es:
+            'La cuenta esta autenticada, pero no tiene perfil en el backend. La alerta SOS quedo guardada localmente.',
+        en:
+            'The account is authenticated, but it does not have a backend profile. The SOS alert was saved locally.',
         ay:
-            'Cuentax autenticatawa, ukampis backend ukanx janiw perfilani.',
+            'Cuentax autenticatawa, ukampis backend ukanx janiw perfilani. SOS alertax localan imatawa.',
         qu:
-            'Cuentaqa autenticada kashan, ichaqa backendpi perfilninta mana kanchu.',
+            'Cuentaqa autenticada kashan, ichaqa backendpi perfilninta mana kanchu. SOS alertaqa localpim waqaychasqa karqan.',
       );
     }
 
-    return error.message;
+    return _t(
+      es:
+          'La alerta SOS se guardo localmente. $appName sincronizara el incidente cuando el servicio vuelva a responder.',
+      en:
+          'The SOS alert was saved locally. $appName will sync the incident when the service responds again.',
+      ay:
+          'SOS alertax localan imatawa. $appName ukax incidente sincronizaniwa serviciox wasitat kuttanipkani ukhaxa.',
+      qu:
+          'SOS alertaqa localpim waqaychasqa karqan. Servicio kutimuptinqa ${appName}qa incidenteta sincronizanan.',
+    );
   }
 
   String _formatAlertTimestamp(DateTime value) {
@@ -534,25 +579,43 @@ class EmergencyBackendService {
   }
 }
 
-Map<String, dynamic> _extractDataMap(Map<String, dynamic> response) {
-  final data = response['data'];
-  if (data is Map<String, dynamic>) {
-    return data;
+IncidentRecord? _extractIncidentDetail(Map<String, dynamic> response) {
+  final directData = response['data'];
+  if (directData is Map<String, dynamic>) {
+    return IncidentRecord.fromBackendJson(directData);
   }
 
-  if (data is Map) {
-    return Map<String, dynamic>.from(data);
+  if (directData is Map) {
+    final normalized = Map<String, dynamic>.from(directData);
+    for (final key in const ['incident', 'item', 'row']) {
+      final nested = normalized[key];
+      if (nested is Map<String, dynamic>) {
+        return IncidentRecord.fromBackendJson(nested);
+      }
+      if (nested is Map) {
+        return IncidentRecord.fromBackendJson(Map<String, dynamic>.from(nested));
+      }
+    }
+    return IncidentRecord.fromBackendJson(normalized);
   }
 
-  return <String, dynamic>{};
+  for (final key in const ['incident', 'item', 'row']) {
+    final nested = response[key];
+    if (nested is Map<String, dynamic>) {
+      return IncidentRecord.fromBackendJson(nested);
+    }
+    if (nested is Map) {
+      return IncidentRecord.fromBackendJson(Map<String, dynamic>.from(nested));
+    }
+  }
+
+  if (response['id'] != null) {
+    return IncidentRecord.fromBackendJson(response);
+  }
+
+  return null;
 }
 
-String _readString(dynamic value, {String fallback = ''}) {
-  if (value is String) {
-    return value;
-  }
-  if (value == null) {
-    return fallback;
-  }
-  return value.toString();
+String _buildLocalIncidentId() {
+  return 'local-incident-${DateTime.now().microsecondsSinceEpoch}';
 }

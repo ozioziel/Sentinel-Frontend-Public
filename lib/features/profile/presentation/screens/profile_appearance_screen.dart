@@ -141,7 +141,10 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(context.tr('profile.appearance.avatar_title'), style: AppTheme.titleLarge),
+              Text(
+                context.tr('profile.appearance.avatar_title'),
+                style: AppTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
               Text(
                 context.tr('profile.appearance.avatar_subtitle'),
@@ -162,7 +165,10 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 24),
-              Text(context.tr('profile.appearance.launcher_title'), style: AppTheme.titleLarge),
+              Text(
+                context.tr('profile.appearance.launcher_title'),
+                style: AppTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
               Text(
                 context.tr('profile.appearance.launcher_subtitle'),
@@ -189,8 +195,9 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                 decoration: InputDecoration(
                   labelText: context.tr('profile.appearance.custom_name_label'),
                   hintText: selectedPreset.launcherName,
-                  helperText:
-                      context.tr('profile.appearance.custom_name_helper'),
+                  helperText: context.tr(
+                    'profile.appearance.custom_name_helper',
+                  ),
                   prefixIcon: const Icon(Icons.draw_outlined),
                 ),
               ),
@@ -230,7 +237,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppTheme.surface,
                           ),
                         )
                       : const Icon(Icons.palette_outlined, size: 18),
@@ -331,7 +338,7 @@ class _BrandingPreviewBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(icon, color: Colors.white, size: 28),
+      child: Icon(icon, color: AppTheme.textPrimary, size: 28),
     );
   }
 }
