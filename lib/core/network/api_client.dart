@@ -2,8 +2,11 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
+import '../navigation/app_navigator.dart';
+import '../routes/app_routes.dart';
 import 'api_exception.dart';
 
 class ApiClient {
@@ -85,6 +88,19 @@ class ApiClient {
     final response = await http.Response.fromStream(streamedResponse);
     final parsedBody = _decodeBody(response.body);
     final responseMap = _normalizeResponse(parsedBody);
+
+    if (response.statusCode == 401) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('sentinel_session');
+      AppNavigator.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
+      throw ApiException(
+        message: 'La sesion ha expirado. Por favor inicia sesion nuevamente.',
+        statusCode: 401,
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
