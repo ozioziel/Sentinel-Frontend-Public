@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,14 +76,14 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> _sendRequest(http.BaseRequest request) async {
-    http.StreamedResponse streamedResponse;
+    late final http.StreamedResponse streamedResponse;
 
     try {
       streamedResponse = await _client
           .send(request)
           .timeout(const Duration(seconds: 25));
     } catch (_) {
-      throw const ApiException(message: 'No se pudo conectar con el servidor.');
+      _throwLogged(const ApiException(message: 'No se pudo conectar con el servidor.'));
     }
 
     final response = await http.Response.fromStream(streamedResponse);
@@ -96,26 +97,26 @@ class ApiClient {
         AppRoutes.login,
         (route) => false,
       );
-      throw ApiException(
+      _throwLogged(const ApiException(
         message: 'La sesion ha expirado. Por favor inicia sesion nuevamente.',
         statusCode: 401,
-      );
+      ));
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
+      _throwLogged(ApiException(
         message: _extractMessage(responseMap, fallback: 'Error del servidor.'),
         statusCode: response.statusCode,
         details: responseMap['details'],
-      );
+      ));
     }
 
     if (responseMap['success'] == false) {
-      throw ApiException(
+      _throwLogged(ApiException(
         message: _extractMessage(responseMap, fallback: 'Operacion fallida.'),
         statusCode: response.statusCode,
         details: responseMap['details'],
-      );
+      ));
     }
 
     return responseMap;
@@ -188,5 +189,10 @@ class ApiClient {
     }
 
     return fallback;
+  }
+
+  Never _throwLogged(ApiException e) {
+    debugPrint('[ApiClient] ${e.toString()}');
+    throw e;
   }
 }
