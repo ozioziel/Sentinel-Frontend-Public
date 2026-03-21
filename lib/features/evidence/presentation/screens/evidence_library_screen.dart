@@ -36,11 +36,6 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
     return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
-  int get _associatedCount =>
-      _evidences.where((evidence) => evidence.isAssociated).length;
-
-  int get _unassociatedCount => _evidences.length - _associatedCount;
-
   @override
   void initState() {
     super.initState();
@@ -180,52 +175,6 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                       actionIcon: Icons.add_rounded,
                       onPressed: _openCreateScreen,
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Total',
-                              en: 'Total',
-                              ay: 'Total',
-                              qu: 'Total',
-                            ),
-                            value: _evidences.length.toString(),
-                            color: AppTheme.primaryLight,
-                            icon: Icons.folder_copy_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Asociadas',
-                              en: 'Linked',
-                              ay: 'Mayachatani',
-                              qu: 'Tinkisqakuna',
-                            ),
-                            value: _associatedCount.toString(),
-                            color: AppTheme.success,
-                            icon: Icons.link_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Sin incidente',
-                              en: 'No incident',
-                              ay: 'Jan incidenteni',
-                              qu: 'Mana incidenteyuq',
-                            ),
-                            value: _unassociatedCount.toString(),
-                            color: AppTheme.warning,
-                            icon: Icons.layers_clear_rounded,
-                          ),
-                        ),
-                      ],
-                    ),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 16),
                       StatusBanner(
@@ -237,31 +186,14 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _t(
-                                  es: 'Tu bandeja',
-                                  en: 'Your inbox',
-                                  ay: 'Bandejam',
-                                  qu: 'Bandejayki',
-                                ),
-                                style: AppTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _t(
-                                  es: 'Las evidencias aparecen primero como archivos independientes. Desde el detalle puedes usar un selector desplegable para asociarlas cuando corresponda.',
-                                  en: 'Evidence appears first as independent files. From the detail you can use a dropdown selector to associate it when appropriate.',
-                                  ay: 'Evidencianakax nayraqata sapan archivonjamaw uñsti. Detalleta mä desplegable selectorampi kunapachatix wakiski ukhax mayachasmawa.',
-                                  qu: 'Evidenciakunaqa ñawpaqta sapallan archivokuna hina rikurimun. Detallenninmanta huk desplegable selectorwan maypachachus allin chayqa tinkichiyta atinki.',
-                                ),
-                                style: AppTheme.bodyMedium.copyWith(
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            _t(
+                              es: 'Evidencias registradas',
+                              en: 'Registered evidence',
+                              ay: 'Qillqt\'ata evidencias',
+                              qu: 'Qillqasqa evidenciakuna',
+                            ),
+                            style: AppTheme.titleLarge,
                           ),
                         ),
                         if (_isRefreshing)

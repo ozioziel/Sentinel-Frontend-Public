@@ -27,7 +27,7 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
   String? _selectedFilePath;
   String? _selectedFileName;
   int? _selectedFileSize;
-  String _selectedType = 'auto';
+  String? _detectedType;
   DateTime? _takenAt;
   bool _isPrivate = true;
   bool _isSubmitting = false;
@@ -95,7 +95,7 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
       _selectedFilePath = selected.path;
       _selectedFileName = selected.name;
       _selectedFileSize = size;
-      _selectedType = 'auto';
+      _detectedType = _service.detectEvidenceTypeForFile(selected.path!);
     });
   }
 
@@ -150,7 +150,7 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
 
     final result = await _service.createEvidence(
       filePath: _selectedFilePath!,
-      selectedType: _selectedType,
+      selectedType: _detectedType,
       title: _titleController.text,
       description: _descriptionController.text,
       takenAt: _takenAt,
@@ -173,6 +173,26 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _detectedTypeLabel(String? type) {
+    switch ((type ?? '').trim().toLowerCase()) {
+      case 'imagen':
+        return _t(es: 'Imagen', en: 'Image', ay: 'Imagen', qu: 'Imagen');
+      case 'video':
+        return _t(es: 'Video', en: 'Video', ay: 'Video', qu: 'Video');
+      case 'audio':
+        return _t(es: 'Audio', en: 'Audio', ay: 'Audio', qu: 'Audio');
+      case 'texto':
+        return _t(es: 'Texto', en: 'Text', ay: 'Texto', qu: 'Texto');
+      default:
+        return _t(
+          es: 'Documento',
+          en: 'Document',
+          ay: 'Documento',
+          qu: 'Documento',
+        );
+    }
   }
 
   @override
@@ -268,73 +288,17 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedType),
-                initialValue: _selectedType,
-                items: [
-                  DropdownMenuItem(
-                    value: 'auto',
-                    child: Text(
-                      _t(
-                        es: 'Tipo automatico',
-                        en: 'Automatic type',
-                        ay: 'Automatico kasta',
-                        qu: 'Automatico kasta',
-                      ),
-                    ),
+              if (_selectedFilePath != null) ...[
+                StatusBanner(
+                  message: _t(
+                    es: 'Tipo detectado automaticamente: ${_detectedTypeLabel(_detectedType)}',
+                    en: 'Automatically detected type: ${_detectedTypeLabel(_detectedType)}',
+                    ay: 'Automaticon uñt\'ata kasta: ${_detectedTypeLabel(_detectedType)}',
+                    qu: 'Automatico reqsisqa kasta: ${_detectedTypeLabel(_detectedType)}',
                   ),
-                  DropdownMenuItem(
-                    value: 'imagen',
-                    child: Text(
-                      _t(es: 'Imagen', en: 'Image', ay: 'Imagen', qu: 'Imagen'),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'video',
-                    child: Text(
-                      _t(es: 'Video', en: 'Video', ay: 'Video', qu: 'Video'),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'audio',
-                    child: Text(
-                      _t(es: 'Audio', en: 'Audio', ay: 'Audio', qu: 'Audio'),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'documento',
-                    child: Text(
-                      _t(
-                        es: 'Documento',
-                        en: 'Document',
-                        ay: 'Documento',
-                        qu: 'Documento',
-                      ),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'texto',
-                    child: Text(
-                      _t(es: 'Texto', en: 'Text', ay: 'Texto', qu: 'Texto'),
-                    ),
-                  ),
-                ],
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) {
-                        setState(() => _selectedType = value ?? 'auto');
-                      },
-                decoration: InputDecoration(
-                  labelText: _t(
-                    es: 'Tipo de evidencia',
-                    en: 'Evidence type',
-                    ay: 'Evidencia kasta',
-                    qu: 'Evidencia kasta',
-                  ),
-                  prefixIcon: Icon(Icons.category_outlined),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
               TextFormField(
                 controller: _titleController,
                 maxLength: 80,

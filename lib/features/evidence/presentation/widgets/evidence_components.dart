@@ -147,6 +147,60 @@ class StatusBanner extends StatelessWidget {
   }
 }
 
+class DismissibleStatusBanner extends StatelessWidget {
+  final String message;
+  final bool isWarning;
+  final VoidCallback onDismiss;
+
+  const DismissibleStatusBanner({
+    super.key,
+    required this.message,
+    required this.onDismiss,
+    this.isWarning = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isWarning ? AppTheme.warning : AppTheme.primaryLight;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isWarning
+                ? Icons.warning_amber_rounded
+                : Icons.info_outline_rounded,
+            color: color,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTheme.bodyMedium.copyWith(color: color, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: onDismiss,
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(Icons.close_rounded, color: color, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class EmptyStateCard extends StatelessWidget {
   final IconData icon;
   final String title;

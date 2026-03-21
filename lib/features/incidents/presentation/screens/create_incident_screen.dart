@@ -21,8 +21,6 @@ class _CreateIncidentScreenState extends State<CreateIncidentScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
-  String _selectedType = 'general';
-  String _selectedRiskLevel = 'sin definir';
   DateTime _occurredAt = DateTime.now();
   bool _isSubmitting = false;
 
@@ -87,8 +85,6 @@ class _CreateIncidentScreenState extends State<CreateIncidentScreen> {
       title: _titleController.text,
       description: _descriptionController.text,
       location: _locationController.text,
-      type: _selectedType,
-      riskLevel: _selectedRiskLevel,
       occurredAt: _occurredAt,
     );
 
@@ -110,60 +106,6 @@ class _CreateIncidentScreenState extends State<CreateIncidentScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  DropdownMenuItem<String> _typeItem(String value) {
-    final label = switch (value) {
-      'general' => _t(
-        es: 'General',
-        en: 'General',
-        ay: 'General',
-        qu: 'General',
-      ),
-      'acoso' => _t(es: 'Acoso', en: 'Harassment', ay: 'Acoso', qu: 'Acoso'),
-      'violencia' => _t(
-        es: 'Violencia',
-        en: 'Violence',
-        ay: 'Violencia',
-        qu: 'Violencia',
-      ),
-      'seguimiento' => _t(
-        es: 'Seguimiento',
-        en: 'Stalking',
-        ay: 'Seguimiento',
-        qu: 'Seguimiento',
-      ),
-      _ => _t(
-        es: 'Emergencia',
-        en: 'Emergency',
-        ay: 'Emergencia',
-        qu: 'Emergencia',
-      ),
-    };
-
-    return DropdownMenuItem(value: value, child: Text(label));
-  }
-
-  DropdownMenuItem<String> _riskItem(String value) {
-    final label = switch (value) {
-      'bajo' => _t(es: 'Bajo', en: 'Low', ay: 'Bajo', qu: 'Bajo'),
-      'medio' => _t(es: 'Medio', en: 'Medium', ay: 'Medio', qu: 'Medio'),
-      'alto' => _t(es: 'Alto', en: 'High', ay: 'Alto', qu: 'Alto'),
-      'critico' => _t(
-        es: 'Critico',
-        en: 'Critical',
-        ay: 'Critico',
-        qu: 'Critico',
-      ),
-      _ => _t(
-        es: 'Sin definir',
-        en: 'Undefined',
-        ay: 'Sin definir',
-        qu: 'Sin definir',
-      ),
-    };
-
-    return DropdownMenuItem(value: value, child: Text(label));
   }
 
   @override
@@ -215,6 +157,15 @@ class _CreateIncidentScreenState extends State<CreateIncidentScreen> {
                 ),
               ),
               const SizedBox(height: 18),
+              StatusBanner(
+                message: _t(
+                  es: 'Por ahora el tipo se enviara como violencia y el nivel de riesgo como medio. Luego el backend los definira automaticamente.',
+                  en: 'For now, type will be sent as violence and risk level as medium. Later the backend will define them automatically.',
+                  ay: 'Jichhax tipo violencia ukham apayatani ukat riesgo nivelax medio ukhamaniwa. Qhipat backend ukaw automatico qhanañchani.',
+                  qu: 'Kunanqa tipoqa violencia hina apachisqa kanqa hinaspa riesgo nivelqa medio hina. Qhipaman backendmi automatico sut\'ichanqa.',
+                ),
+              ),
+              const SizedBox(height: 18),
               TextFormField(
                 controller: _titleController,
                 maxLength: 80,
@@ -256,60 +207,6 @@ class _CreateIncidentScreenState extends State<CreateIncidentScreen> {
                     padding: EdgeInsets.only(bottom: 72),
                     child: Icon(Icons.notes_rounded),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedType),
-                initialValue: _selectedType,
-                items: [
-                  _typeItem('general'),
-                  _typeItem('acoso'),
-                  _typeItem('violencia'),
-                  _typeItem('seguimiento'),
-                  _typeItem('emergencia'),
-                ],
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) {
-                        setState(() => _selectedType = value ?? 'general');
-                      },
-                decoration: InputDecoration(
-                  labelText: _t(
-                    es: 'Tipo de incidente',
-                    en: 'Incident type',
-                    ay: 'Incidente kasta',
-                    qu: 'Incidente kasta',
-                  ),
-                  prefixIcon: const Icon(Icons.category_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedRiskLevel),
-                initialValue: _selectedRiskLevel,
-                items: [
-                  _riskItem('sin definir'),
-                  _riskItem('bajo'),
-                  _riskItem('medio'),
-                  _riskItem('alto'),
-                  _riskItem('critico'),
-                ],
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) {
-                        setState(
-                          () => _selectedRiskLevel = value ?? 'sin definir',
-                        );
-                      },
-                decoration: InputDecoration(
-                  labelText: _t(
-                    es: 'Nivel de riesgo',
-                    en: 'Risk level',
-                    ay: 'Riesgo nivel',
-                    qu: 'Riesgo nivel',
-                  ),
-                  prefixIcon: const Icon(Icons.flag_outlined),
                 ),
               ),
               const SizedBox(height: 12),

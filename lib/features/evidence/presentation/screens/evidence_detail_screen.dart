@@ -33,6 +33,7 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   String? _statusMessage;
   String? _associationMessage;
   String _selectedIncidentValue = _noIncidentValue;
+  bool _showIndependentAlert = true;
 
   String _t({
     required String es,
@@ -304,26 +305,23 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _evidence.isAssociated
-                        ? _t(
-                            es: 'Esta evidencia ya esta vinculada. Puedes moverla a otro incidente o dejarla independiente cuando lo necesites.',
-                            en: 'This evidence is already linked. You can move it to another incident or leave it independent when needed.',
-                            ay: 'Aka evidenciax niy mayachatäxiwa. Yaqha incidenter apaqasmawa jan ukax sapakiruw jaytasma.',
-                            qu: 'Kay evidenciaqa ñan tinkisqa kashan. Huk incidenteman kuyuchiyta atinki utaq sapallan saqiyta atinki.',
-                          )
-                        : _t(
-                            es: 'La evidencia se guardo como archivo independiente. Si quieres relacionarla con un caso, hazlo aqui con una accion explicita.',
-                            en: 'The evidence was saved as an independent file. If you want to relate it to a case, do it here with an explicit action.',
-                            ay: 'Evidenciax sapak archivjamaw imasi. Casomp mayachañ munasma ukhax akankwa chiqap luram.',
-                            qu: 'Evidenciaqa sapallan archivo hinam waqaychasqa karqan. Kasoawan tinkichiyta munaspaykiqa, kaypi sut\'inchasqa llamk\'aywan ruway.',
-                          ),
-                    style: AppTheme.bodyMedium,
-                  ),
                 ],
               ),
             ),
+            if (!_evidence.isAssociated && _showIndependentAlert) ...[
+              const SizedBox(height: 16),
+              DismissibleStatusBanner(
+                message: _t(
+                  es: 'La evidencia se guardo como archivo independiente. Si quieres relacionarla con un caso, hazlo desde el selector y guarda el cambio.',
+                  en: 'The evidence was saved as an independent file. If you want to relate it to a case, use the selector and save the change.',
+                  ay: 'Evidenciax sapak archivjamaw imasi. Casomp mayachañ munasma ukhax selector apnaqam ukat mayjt\'awi imam.',
+                  qu: 'Evidenciaqa sapallan archivo hinam waqaychasqa karqan. Kasoawan tinkichiyta munaspaykiqa, selector nisqata apaykachay hinaspa tikrayta waqaychay.',
+                ),
+                onDismiss: () {
+                  setState(() => _showIndependentAlert = false);
+                },
+              ),
+            ],
             const SizedBox(height: 20),
             Text(
               _t(

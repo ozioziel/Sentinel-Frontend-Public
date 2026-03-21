@@ -67,6 +67,11 @@ class EvidenceService {
     return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
+  String? detectEvidenceTypeForFile(String filePath) {
+    final mimeType = lookupMimeType(filePath) ?? _fallbackMimeType(filePath);
+    return _inferEvidenceType(mimeType, filePath);
+  }
+
   Future<EvidenceListResult> loadEvidences() async {
     final user = await _authService.getSession();
     if (user == null) {
@@ -365,6 +370,41 @@ class EvidenceService {
         evidence: storedEvidence,
       );
     } on ApiException catch (error) {
+      if (_isSchemaCacheError(error)) {
+        final localEvidence = EvidenceRecord(
+          id: _buildLocalEvidenceId(),
+          title: title?.trim().isNotEmpty == true
+              ? title!.trim()
+              : p.basename(filePath),
+          description: description?.trim() ?? '',
+          type:
+              resolvedType ??
+              _inferEvidenceType(mimeType, filePath) ??
+              'documento',
+          createdAt: DateTime.now().toUtc().toIso8601String(),
+          takenAt: takenAt?.toUtc().toIso8601String() ?? '',
+          incidentId: null,
+          fileUrl: filePath,
+          fileName: p.basename(filePath),
+          mimeType: mimeType,
+          isPrivate: isPrivate,
+          sizeBytes: sizeBytes,
+        );
+
+        await upsertCachedEvidence(userId: user.id, evidence: localEvidence);
+
+        return EvidenceMutationResult(
+          success: true,
+          message: _schemaCacheLocalSaveMessage(
+            es: 'La evidencia se guardo solo en este dispositivo mientras el servidor actualiza su esquema.',
+            en: 'The evidence was saved only on this device while the server refreshes its schema.',
+            ay: 'Servidorax esquema machaqt\'ayaskipanx evidenciax aka dispositivon sapaki imatawa.',
+            qu: 'Servidorqa esquema musuqyachisqankama evidenciataqa kay dispositivollapim waqaychasqa karqan.',
+          ),
+          evidence: localEvidence,
+        );
+      }
+
       return EvidenceMutationResult(
         success: false,
         message: _mapCreateError(error),
@@ -396,6 +436,14 @@ class EvidenceService {
           ay: 'Janiw asociacion machaqtayañatakix sesion activa utjkiti.',
           qu: 'Asociacionta musuqyachinapaq sesion activaqa mana kanchu.',
         ),
+      );
+    }
+
+    if (_isLocalId(evidence.id) || _isLocalId(incidentId)) {
+      return _saveAssociationLocally(
+        userId: user.id,
+        evidence: evidence,
+        incidentId: incidentId,
       );
     }
 
@@ -433,6 +481,14 @@ class EvidenceService {
         evidence: updatedEvidence,
       );
     } on ApiException catch (error) {
+      if (_isSchemaCacheError(error)) {
+        return _saveAssociationLocally(
+          userId: user.id,
+          evidence: evidence,
+          incidentId: incidentId,
+        );
+      }
+
       return EvidenceMutationResult(
         success: false,
         message: _mapAssociationError(error),
@@ -559,6 +615,15 @@ class EvidenceService {
   }
 
   String _mapLoadError(ApiException error) {
+    if (_isSchemaCacheError(error)) {
+      return _t(
+        es: 'El servidor esta actualizando el esquema de evidencias. Si tienes datos locales, se mostraran mientras tanto.',
+        en: 'The server is refreshing the evidence schema. If you have local data, it will be shown in the meantime.',
+        ay: 'Servidorax evidencianakan esquemap machaqt\'ayaski. Local datonakax utjchi ukhax ukañkamaw uñstani.',
+        qu: 'Servidorqa evidenciakunapa esquemanta musuqyachishan. Local datokuna kaptinqa, chaykamallam rikuchisqa kanqa.',
+      );
+    }
+
     final normalized = error.message.toLowerCase();
     if (normalized.contains('no se pudo conectar con el servidor')) {
       return _t(
@@ -572,6 +637,15 @@ class EvidenceService {
   }
 
   String _mapCreateError(ApiException error) {
+    if (_isSchemaCacheError(error)) {
+      return _schemaCacheLocalSaveMessage(
+        es: 'El servidor esta actualizando el esquema de evidencias. Reintenta en unos minutos si necesitas sincronizar.',
+        en: 'The server is refreshing the evidence schema. Retry in a few minutes if you need to sync.',
+        ay: 'Servidorax evidencianakan esquemap machaqt\'ayaski. Sincronizañ munasax mä juk\'a minutonakat qhipat wasitat yant\'am.',
+        qu: 'Servidorqa evidenciakunapa esquemanta musuqyachishan. Sincronizayta munaspaykiqa huk chhika minutokunamanta qhipaman yapamanta yant\'ay.',
+      );
+    }
+
     final normalized = error.message.toLowerCase();
     if (normalized.contains('uuid invalido')) {
       return _t(
@@ -602,6 +676,15 @@ class EvidenceService {
   }
 
   String _mapAssociationError(ApiException error) {
+    if (_isSchemaCacheError(error)) {
+      return _schemaCacheLocalSaveMessage(
+        es: 'La asociacion se guardo solo de forma local mientras el servidor actualiza su esquema.',
+        en: 'The association was saved only locally while the server refreshes its schema.',
+        ay: 'Servidorax esquema machaqt\'ayaskipanx asociacionax localan sapaki imatawa.',
+        qu: 'Servidorqa esquema musuqyachishankama asociacionqa localllapim waqaychasqa karqan.',
+      );
+    }
+
     final normalized = error.message.toLowerCase();
     if (normalized.contains('incidente no encontrado')) {
       return _t(
@@ -694,5 +777,66 @@ class EvidenceService {
     }
 
     return null;
+  }
+
+  bool _isSchemaCacheError(ApiException error) {
+    final detailsText = error.details?.toString() ?? '';
+    final normalized = '${error.message} $detailsText'.toLowerCase();
+    return normalized.contains('schema cache') ||
+        normalized.contains('schema_cache') ||
+        normalized.contains('pgrst204') ||
+        normalized.contains('pgrst205') ||
+        normalized.contains('could not find') ||
+        normalized.contains('no se encontro la columna') ||
+        normalized.contains('no se encontro la relacion');
+  }
+
+  bool _isLocalId(String? value) {
+    final normalized = (value ?? '').trim();
+    return normalized.startsWith('local-');
+  }
+
+  String _buildLocalEvidenceId() {
+    return 'local-evidence-${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  String _schemaCacheLocalSaveMessage({
+    required String es,
+    required String en,
+    required String ay,
+    required String qu,
+  }) {
+    return _t(es: es, en: en, ay: ay, qu: qu);
+  }
+
+  Future<EvidenceMutationResult> _saveAssociationLocally({
+    required String userId,
+    required EvidenceRecord evidence,
+    required String? incidentId,
+  }) async {
+    final updatedEvidence = evidence.copyWith(
+      incidentId: incidentId,
+      clearIncidentId: incidentId == null,
+    );
+
+    await upsertCachedEvidence(userId: userId, evidence: updatedEvidence);
+
+    return EvidenceMutationResult(
+      success: true,
+      message: incidentId == null
+          ? _t(
+              es: 'La evidencia quedo sin incidente asociado en este dispositivo.',
+              en: 'The evidence was left without an associated incident on this device.',
+              ay: 'Evidenciax aka dispositivon janiw incidenter mayachatakiti.',
+              qu: 'Evidenciaqa kay dispositivopi mana incidentewan tinkisqachu kipakun.',
+            )
+          : _t(
+              es: 'La asociacion de la evidencia se guardo localmente en este dispositivo.',
+              en: 'The evidence association was saved locally on this device.',
+              ay: 'Evidencia mayachawix aka dispositivon localan imatawa.',
+              qu: 'Evidencia asociacionninqa kay dispositivopi localpim waqaychasqa karqan.',
+            ),
+      evidence: updatedEvidence,
+    );
   }
 }

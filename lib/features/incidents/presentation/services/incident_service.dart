@@ -193,9 +193,9 @@ class IncidentService {
   Future<IncidentMutationResult> createIncident({
     required String title,
     String description = '',
-    String type = 'general',
+    String type = 'violencia',
     String status = 'registrado',
-    String riskLevel = 'sin definir',
+    String riskLevel = 'medio',
     String location = '',
     DateTime? occurredAt,
   }) async {
@@ -286,6 +286,32 @@ class IncidentService {
         incident: createdIncident,
       );
     } on ApiException catch (error) {
+      if (_isSchemaCacheError(error)) {
+        final localIncident = IncidentRecord(
+          id: _buildLocalIncidentId(),
+          title: normalizedTitle,
+          description: description.trim(),
+          type: type.trim().isEmpty ? 'violencia' : type.trim(),
+          status: status.trim().isEmpty ? 'registrado' : status.trim(),
+          riskLevel: riskLevel.trim().isEmpty ? 'medio' : riskLevel.trim(),
+          location: location.trim(),
+          occurredAt: responseDate,
+        );
+
+        await upsertCachedIncident(userId: user.id, incident: localIncident);
+
+        return IncidentMutationResult(
+          success: true,
+          message: _t(
+            es: 'El incidente se guardo solo en este dispositivo mientras el servidor actualiza su esquema.',
+            en: 'The incident was saved only on this device while the server refreshes its schema.',
+            ay: 'Servidorax esquema machaqt\'ayaskipanx incidentex aka dispositivon sapaki imatawa.',
+            qu: 'Servidorqa esquema musuqyachishankama incidenteqa kay dispositivollapim waqaychasqa karqan.',
+          ),
+          incident: localIncident,
+        );
+      }
+
       return IncidentMutationResult(
         success: false,
         message: _mapCreateError(error),
@@ -398,6 +424,15 @@ class IncidentService {
   }
 
   String _mapLoadError(ApiException error) {
+    if (_isSchemaCacheError(error)) {
+      return _t(
+        es: 'El servidor esta actualizando el esquema de incidentes. Si tienes datos locales, se mostraran mientras tanto.',
+        en: 'The server is refreshing the incident schema. If you have local data, it will be shown in the meantime.',
+        ay: 'Servidorax incidentenakan esquemap machaqt\'ayaski. Local datonakax utjchi ukhax ukañkamaw uñstani.',
+        qu: 'Servidorqa incidentekunapa esquemanta musuqyachishan. Local datokuna kaptinqa, chaykamallam rikuchisqa kanqa.',
+      );
+    }
+
     final normalized = error.message.toLowerCase();
     if (normalized.contains('no se pudo conectar con el servidor')) {
       return _t(
@@ -411,6 +446,15 @@ class IncidentService {
   }
 
   String _mapCreateError(ApiException error) {
+    if (_isSchemaCacheError(error)) {
+      return _t(
+        es: 'El servidor esta actualizando el esquema de incidentes. Reintenta en unos minutos si necesitas sincronizar.',
+        en: 'The server is refreshing the incident schema. Retry in a few minutes if you need to sync.',
+        ay: 'Servidorax incidentenakan esquemap machaqt\'ayaski. Sincronizañ munasax mä juk\'a minutonakat qhipat wasitat yant\'am.',
+        qu: 'Servidorqa incidentekunapa esquemanta musuqyachishan. Sincronizayta munaspaykiqa huk chhika minutokunamanta qhipaman yapamanta yant\'ay.',
+      );
+    }
+
     final normalized = error.message.toLowerCase();
     if (normalized.contains('perfil no encontrado')) {
       return _t(
@@ -429,5 +473,21 @@ class IncidentService {
       );
     }
     return error.message;
+  }
+
+  bool _isSchemaCacheError(ApiException error) {
+    final detailsText = error.details?.toString() ?? '';
+    final normalized = '${error.message} $detailsText'.toLowerCase();
+    return normalized.contains('schema cache') ||
+        normalized.contains('schema_cache') ||
+        normalized.contains('pgrst204') ||
+        normalized.contains('pgrst205') ||
+        normalized.contains('could not find') ||
+        normalized.contains('no se encontro la columna') ||
+        normalized.contains('no se encontro la relacion');
+  }
+
+  String _buildLocalIncidentId() {
+    return 'local-incident-${DateTime.now().microsecondsSinceEpoch}';
   }
 }

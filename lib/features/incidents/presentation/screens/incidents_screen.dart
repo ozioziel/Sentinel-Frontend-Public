@@ -36,18 +36,6 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
-  int get _openCount => _incidents.where((incident) {
-    final status = incident.status.toLowerCase();
-    return status.contains('abierto') ||
-        status.contains('open') ||
-        status.contains('registrado') ||
-        status.contains('registered');
-  }).length;
-
-  int get _withContextCount => _incidents
-      .where((incident) => incident.description.trim().isNotEmpty)
-      .length;
-
   @override
   void initState() {
     super.initState();
@@ -180,52 +168,6 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                       ),
                       actionIcon: Icons.add_rounded,
                       onPressed: _openCreateIncident,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Total',
-                              en: 'Total',
-                              ay: 'Total',
-                              qu: 'Total',
-                            ),
-                            value: _incidents.length.toString(),
-                            color: AppTheme.primaryLight,
-                            icon: Icons.report_gmailerrorred_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Abiertos',
-                              en: 'Open',
-                              ay: 'Jist\'arata',
-                              qu: 'Kicharisqa',
-                            ),
-                            value: _openCount.toString(),
-                            color: AppTheme.warning,
-                            icon: Icons.flag_circle_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SummaryMetricCard(
-                            label: _t(
-                              es: 'Con contexto',
-                              en: 'With context',
-                              ay: 'Contextoni',
-                              qu: 'Contextoyuq',
-                            ),
-                            value: _withContextCount.toString(),
-                            color: AppTheme.success,
-                            icon: Icons.notes_rounded,
-                          ),
-                        ),
-                      ],
                     ),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 16),
