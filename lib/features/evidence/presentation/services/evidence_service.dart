@@ -64,12 +64,7 @@ class EvidenceService {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   Future<EvidenceListResult> loadEvidences() async {
@@ -331,17 +326,43 @@ class EvidenceService {
             sizeBytes: sizeBytes,
           );
 
-      await upsertCachedEvidence(userId: user.id, evidence: createdEvidence);
+      var storedEvidence = createdEvidence;
+      var successMessage = _t(
+        es: 'Evidencia creada correctamente.',
+        en: 'Evidence created successfully.',
+        ay: 'Evidenciax wali sum luratawa.',
+        qu: 'Evidenciaqa allinta ruwasqa karqan.',
+      );
+
+      if (storedEvidence.isAssociated && storedEvidence.id.trim().isNotEmpty) {
+        final detachResult = await updateEvidenceIncident(
+          evidence: storedEvidence,
+          incidentId: null,
+        );
+        if (detachResult.success && detachResult.evidence != null) {
+          storedEvidence = detachResult.evidence!;
+          successMessage = _t(
+            es: 'Evidencia creada sin incidente asociado.',
+            en: 'Evidence created without an associated incident.',
+            ay: 'Evidenciax janiw incidenter mayachatakiti luratawa.',
+            qu: 'Evidenciaqa mana incidentewan tinkisqachu ruwasqa karqan.',
+          );
+        } else {
+          successMessage = _t(
+            es: 'La evidencia se creo, pero no se pudo quitar la asociacion automatica. Revisa el detalle para corregirla.',
+            en: 'The evidence was created, but the automatic association could not be removed. Review the detail to fix it.',
+            ay: 'Evidenciax luratawa, ukampis janiw automatico asociacion apaqañjamakiti. Detalle uñakipam askichañataki.',
+            qu: 'Evidenciaqa ruwasqa karqan, ichaqa automatico asociacionqa mana qichuyta atikurqanchu. Detalleta qhawariy allichanapaq.',
+          );
+        }
+      }
+
+      await upsertCachedEvidence(userId: user.id, evidence: storedEvidence);
 
       return EvidenceMutationResult(
         success: true,
-        message: _t(
-          es: 'Evidencia creada correctamente.',
-          en: 'Evidence created successfully.',
-          ay: 'Evidenciax wali sum luratawa.',
-          qu: 'Evidenciaqa allinta ruwasqa karqan.',
-        ),
-        evidence: createdEvidence,
+        message: successMessage,
+        evidence: storedEvidence,
       );
     } on ApiException catch (error) {
       return EvidenceMutationResult(
@@ -544,8 +565,7 @@ class EvidenceService {
         es: 'No se pudo actualizar la bandeja de evidencias. Revisa tu conexion.',
         en: 'The evidence inbox could not be updated. Check your connection.',
         ay: 'Janiw evidencianak bandejax machaqtayañjamakiti. Conexion uñakipam.',
-        qu:
-            'Evidencia bandejaqa mana musuqyachiyta atikurqanchu. Conexionniykita qhawariy.',
+        qu: 'Evidencia bandejaqa mana musuqyachiyta atikurqanchu. Conexionniykita qhawariy.',
       );
     }
     return error.message;

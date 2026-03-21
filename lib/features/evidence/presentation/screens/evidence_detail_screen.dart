@@ -20,13 +20,19 @@ class EvidenceDetailScreen extends StatefulWidget {
 }
 
 class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
+  static const String _noIncidentValue = '__no_incident__';
+
   final EvidenceService _evidenceService = EvidenceService();
   final IncidentService _incidentService = IncidentService();
 
   late EvidenceRecord _evidence;
+  List<IncidentRecord> _incidents = [];
   bool _isLoadingDetail = true;
+  bool _isLoadingIncidents = true;
   bool _isUpdatingAssociation = false;
   String? _statusMessage;
+  String? _associationMessage;
+  String _selectedIncidentValue = _noIncidentValue;
 
   String _t({
     required String es,
@@ -34,19 +40,30 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
+
+  String? get _selectedIncidentId => _selectedIncidentValue == _noIncidentValue
+      ? null
+      : _selectedIncidentValue;
+
+  bool get _hasAssociationChanges =>
+      _selectedIncidentId != _evidence.incidentId;
 
   @override
   void initState() {
     super.initState();
     _evidence = widget.initialEvidence;
+    _syncSelectedIncident();
     _loadDetail();
+    _loadIncidents();
+  }
+
+  void _syncSelectedIncident() {
+    final incidentId = _evidence.incidentId;
+    _selectedIncidentValue = incidentId == null || incidentId.trim().isEmpty
+        ? _noIncidentValue
+        : incidentId;
   }
 
   Future<void> _loadDetail() async {
@@ -61,32 +78,26 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
     setState(() {
       if (result.evidence != null) {
         _evidence = result.evidence!;
+        _syncSelectedIncident();
       }
       _statusMessage = result.message;
       _isLoadingDetail = false;
     });
   }
 
-  Future<void> _manageAssociation() async {
-    final selection = await showModalBottomSheet<_AssociationSelection>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppTheme.cardBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _AssociationSheet(
-        currentIncidentId: _evidence.incidentId,
-        incidentService: _incidentService,
-      ),
-    );
+  Future<void> _loadIncidents() async {
+    final result = await _incidentService.loadIncidents();
+    if (!mounted) return;
 
-    if (!mounted || selection == null || !selection.didConfirm) {
-      return;
-    }
+    setState(() {
+      _incidents = result.incidents;
+      _associationMessage = result.message;
+      _isLoadingIncidents = false;
+    });
+  }
 
-    if (selection.incidentId == _evidence.incidentId) {
+  Future<void> _saveAssociation() async {
+    if (!_hasAssociationChanges) {
       return;
     }
 
@@ -94,14 +105,20 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
 
     final result = await _evidenceService.updateEvidenceIncident(
       evidence: _evidence,
-      incidentId: selection.incidentId,
+      incidentId: _selectedIncidentId,
     );
     if (!mounted) return;
 
     setState(() {
       if (result.evidence != null) {
         _evidence = result.evidence!;
+      } else {
+        _evidence = _evidence.copyWith(
+          incidentId: _selectedIncidentId,
+          clearIncidentId: _selectedIncidentId == null,
+        );
       }
+      _syncSelectedIncident();
       _statusMessage = result.message;
       _isUpdatingAssociation = false;
     });
@@ -115,9 +132,79 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _incidentLabel(String? incidentId) {
+    if (incidentId == null || incidentId.trim().isEmpty) {
+      return _t(
+        es: 'Sin incidente',
+        en: 'No incident',
+        ay: 'Jan incidenteni',
+        qu: 'Mana incidenteyuq',
+      );
+    }
+
+    for (final incident in _incidents) {
+      if (incident.id == incidentId) {
+        return incident.title;
+      }
+    }
+
+    final shortId = incidentId.length <= 8
+        ? incidentId
+        : incidentId.substring(0, 8);
+    return _t(
+      es: 'Incidente actual ($shortId)',
+      en: 'Current incident ($shortId)',
+      ay: 'Jichha incidente ($shortId)',
+      qu: 'Kunan incidente ($shortId)',
+    );
+  }
+
+  List<DropdownMenuItem<String>> _buildAssociationItems() {
+    final items = <DropdownMenuItem<String>>[
+      DropdownMenuItem(
+        value: _noIncidentValue,
+        child: Text(
+          _t(
+            es: 'Sin incidente',
+            en: 'No incident',
+            ay: 'Jan incidenteni',
+            qu: 'Mana incidenteyuq',
+          ),
+        ),
+      ),
+    ];
+
+    final currentIncidentId = _evidence.incidentId;
+    final containsCurrent =
+        currentIncidentId != null &&
+        currentIncidentId.trim().isNotEmpty &&
+        _incidents.any((incident) => incident.id == currentIncidentId);
+
+    if (currentIncidentId != null &&
+        currentIncidentId.trim().isNotEmpty &&
+        !containsCurrent) {
+      items.add(
+        DropdownMenuItem(
+          value: currentIncidentId,
+          child: Text(_incidentLabel(currentIncidentId)),
+        ),
+      );
+    }
+
+    items.addAll(
+      _incidents.map(
+        (incident) =>
+            DropdownMenuItem(value: incident.id, child: Text(incident.title)),
+      ),
+    );
+
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     final typeStyle = evidenceTypeStyleFor(_evidence.type);
+    final associationItems = _buildAssociationItems();
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -217,29 +304,136 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  CustomButton(
-                    text: _evidence.isAssociated
+                  const SizedBox(height: 16),
+                  Text(
+                    _evidence.isAssociated
                         ? _t(
-                            es: 'Mover o quitar asociacion',
-                            en: 'Move or remove association',
-                            ay: 'Asociacion apaqam jan ukax chhaqtayam',
-                            qu: 'Asociacionta kuyuchiy utaq qichuy',
+                            es: 'Esta evidencia ya esta vinculada. Puedes moverla a otro incidente o dejarla independiente cuando lo necesites.',
+                            en: 'This evidence is already linked. You can move it to another incident or leave it independent when needed.',
+                            ay: 'Aka evidenciax niy mayachatäxiwa. Yaqha incidenter apaqasmawa jan ukax sapakiruw jaytasma.',
+                            qu: 'Kay evidenciaqa ñan tinkisqa kashan. Huk incidenteman kuyuchiyta atinki utaq sapallan saqiyta atinki.',
                           )
                         : _t(
-                            es: 'Asociar a incidente',
-                            en: 'Associate with incident',
-                            ay: 'Incidente ukar mayacha',
-                            qu: 'Incidenteman tinkichiy',
+                            es: 'La evidencia se guardo como archivo independiente. Si quieres relacionarla con un caso, hazlo aqui con una accion explicita.',
+                            en: 'The evidence was saved as an independent file. If you want to relate it to a case, do it here with an explicit action.',
+                            ay: 'Evidenciax sapak archivjamaw imasi. Casomp mayachañ munasma ukhax akankwa chiqap luram.',
+                            qu: 'Evidenciaqa sapallan archivo hinam waqaychasqa karqan. Kasoawan tinkichiyta munaspaykiqa, kaypi sut\'inchasqa llamk\'aywan ruway.',
                           ),
-                    icon: _evidence.isAssociated
-                        ? Icons.swap_horiz_rounded
-                        : Icons.link_rounded,
-                    isLoading: _isUpdatingAssociation,
-                    onPressed: _isUpdatingAssociation
-                        ? null
-                        : _manageAssociation,
+                    style: AppTheme.bodyMedium,
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _t(
+                es: 'Asociacion con incidente',
+                en: 'Incident association',
+                ay: 'Incidente mayachawi',
+                qu: 'Incidente asociacion',
+              ),
+              style: AppTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppTheme.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _t(
+                      es: 'Selecciona un incidente existente solo si deseas vincular esta evidencia. El cambio se aplica unicamente cuando pulses guardar.',
+                      en: 'Select an existing incident only if you want to link this evidence. The change is applied only when you press save.',
+                      ay: 'Maya utjir incidente ajllim aka evidencia mayachañ munasakixa. Mayjt\'awix imañ limt\'asaw phuqhasi.',
+                      qu: 'Kay evidenciata tinkichiyta munaspallayki chayqa huk incidente kachkaqta akllay. Tikrayqa waqaychayta ñit\'ispa chayllaraq ruwakun.',
+                    ),
+                    style: AppTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  if (_associationMessage != null) ...[
+                    StatusBanner(
+                      message: _associationMessage!,
+                      isWarning: _incidents.isEmpty,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_isLoadingIncidents)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(color: AppTheme.primary),
+                    )
+                  else ...[
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(
+                        '${_selectedIncidentValue}_${_incidents.length}_${_evidence.incidentId ?? 'none'}',
+                      ),
+                      initialValue: _selectedIncidentValue,
+                      items: associationItems,
+                      onChanged: _isUpdatingAssociation
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _selectedIncidentValue =
+                                    value ?? _noIncidentValue;
+                              });
+                            },
+                      decoration: InputDecoration(
+                        labelText: _t(
+                          es: 'Incidente vinculado',
+                          en: 'Linked incident',
+                          ay: 'Mayachata incidente',
+                          qu: 'Tinkisqa incidente',
+                        ),
+                        prefixIcon: const Icon(Icons.link_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    StatusBanner(
+                      message: _selectedIncidentId == null
+                          ? _t(
+                              es: 'La evidencia quedara sin incidente asociado hasta que decidas vincularla.',
+                              en: 'The evidence will remain without an associated incident until you decide to link it.',
+                              ay: 'Evidenciax janiw incidenter mayachatakiti qhipat amtañkama.',
+                              qu: 'Evidenciaqa mana incidentewan tinkisqachu kipakunqa qhipaman akllanaykikama.',
+                            )
+                          : _t(
+                              es: 'Se vinculara con: ${_incidentLabel(_selectedIncidentId)}',
+                              en: 'It will be linked with: ${_incidentLabel(_selectedIncidentId)}',
+                              ay: 'Akamp mayachasiniwa: ${_incidentLabel(_selectedIncidentId)}',
+                              qu: 'Kaywan tinkisqa kanqa: ${_incidentLabel(_selectedIncidentId)}',
+                            ),
+                      isWarning: _selectedIncidentId == null,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomButton(
+                      text: _selectedIncidentId == null
+                          ? _t(
+                              es: 'Guardar sin incidente',
+                              en: 'Save without incident',
+                              ay: 'Jan incidenteni imam',
+                              qu: 'Mana incidentewan waqaychay',
+                            )
+                          : _t(
+                              es: 'Guardar asociacion',
+                              en: 'Save association',
+                              ay: 'Asociacion imam',
+                              qu: 'Asociacion waqaychay',
+                            ),
+                      icon: _selectedIncidentId == null
+                          ? Icons.link_off_rounded
+                          : Icons.save_outlined,
+                      isLoading: _isUpdatingAssociation,
+                      onPressed:
+                          (!_hasAssociationChanges || _isLoadingIncidents)
+                          ? null
+                          : _saveAssociation,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -309,6 +503,16 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                   _MetadataRow(
                     label: 'incident_id',
                     value: _evidence.incidentId ?? 'null',
+                  ),
+                  const Divider(color: AppTheme.divider),
+                  _MetadataRow(
+                    label: _t(
+                      es: 'Incidente visible',
+                      en: 'Visible incident',
+                      ay: 'Uñt\'ata incidente',
+                      qu: 'Rikusqa incidente',
+                    ),
+                    value: _incidentLabel(_evidence.incidentId),
                   ),
                   const Divider(color: AppTheme.divider),
                   _MetadataRow(
@@ -429,241 +633,6 @@ class _MetadataRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AssociationSelection {
-  final bool didConfirm;
-  final String? incidentId;
-
-  const _AssociationSelection({
-    required this.didConfirm,
-    required this.incidentId,
-  });
-}
-
-class _AssociationSheet extends StatefulWidget {
-  final String? currentIncidentId;
-  final IncidentService incidentService;
-
-  const _AssociationSheet({
-    required this.currentIncidentId,
-    required this.incidentService,
-  });
-
-  @override
-  State<_AssociationSheet> createState() => _AssociationSheetState();
-}
-
-class _AssociationSheetState extends State<_AssociationSheet> {
-  String? _selectedIncidentId;
-  bool _isLoading = true;
-  String? _statusMessage;
-  List<IncidentRecord> _incidents = [];
-
-  String _t({
-    required String es,
-    required String en,
-    required String ay,
-    required String qu,
-  }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIncidentId = widget.currentIncidentId;
-    _loadIncidents();
-  }
-
-  Future<void> _loadIncidents() async {
-    final result = await widget.incidentService.loadIncidents();
-    if (!mounted) return;
-
-    setState(() {
-      _incidents = result.incidents;
-      _statusMessage = result.message;
-      _isLoading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _t(
-              es: 'Gestionar asociacion',
-              en: 'Manage association',
-              ay: 'Asociacion apnaqam',
-              qu: 'Asociacionta kamachiy',
-            ),
-            style: AppTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _t(
-              es:
-                  'Asocia la evidencia a un incidente, muevela o dejala sin asociacion.',
-              en:
-                  'Associate the evidence with an incident, move it, or leave it unlinked.',
-              ay:
-                  'Evidencia incidente ukar mayacha, apaqam jan ukax jan mayachata jaytam.',
-              qu:
-                  'Evidenciata incidenteman tinkichiy, kuyuchiy utaq mana tinkisqata saqiy.',
-            ),
-            style: AppTheme.bodyMedium,
-          ),
-          if (_statusMessage != null) ...[
-            const SizedBox(height: 12),
-            StatusBanner(message: _statusMessage!, isWarning: true),
-          ],
-          const SizedBox(height: 16),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: CircularProgressIndicator(color: AppTheme.primary),
-              ),
-            )
-          else
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  _AssociationOptionTile(
-                    title: _t(
-                      es: 'Sin incidente',
-                      en: 'No incident',
-                      ay: 'Jan incidenteni',
-                      qu: 'Mana incidenteyuq',
-                    ),
-                    subtitle: _t(
-                      es:
-                          'La evidencia quedara disponible para asociarla despues.',
-                      en:
-                          'The evidence will remain available to associate later.',
-                      ay:
-                          'Evidenciax qhipat mayachañatakix utjaskaniwa.',
-                      qu:
-                          'Evidenciaqa qhipaman tinkichinapaq kachkanqa.',
-                    ),
-                    selected: _selectedIncidentId == null,
-                    onTap: () {
-                      setState(() => _selectedIncidentId = null);
-                    },
-                  ),
-                  ..._incidents.map(
-                    (incident) => _AssociationOptionTile(
-                      title: incident.title,
-                      subtitle: formatEvidenceDate(incident.occurredAt),
-                      selected: _selectedIncidentId == incident.id,
-                      onTap: () {
-                        setState(() => _selectedIncidentId = incident.id);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 16),
-          CustomButton(
-            text: _t(
-              es: 'Guardar asociacion',
-              en: 'Save association',
-              ay: 'Asociacion ima',
-              qu: 'Asociacion waqaychay',
-            ),
-            icon: Icons.save_outlined,
-            onPressed: _isLoading
-                ? null
-                : () {
-                    Navigator.pop(
-                      context,
-                      _AssociationSelection(
-                        didConfirm: true,
-                        incidentId: _selectedIncidentId,
-                      ),
-                    );
-                  },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AssociationOptionTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _AssociationOptionTile({
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withValues(alpha: 0.14)
-              : AppTheme.surface.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppTheme.primary : AppTheme.divider,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTheme.labelLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: AppTheme.bodyMedium.copyWith(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Icon(
-              selected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
-              color: selected ? AppTheme.primary : AppTheme.textSecondary,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

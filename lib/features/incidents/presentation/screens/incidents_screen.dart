@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/custom_button.dart';
 import '../../../evidence/presentation/widgets/evidence_components.dart';
 import '../../domain/models/incident_record.dart';
 import '../services/incident_service.dart';
+import 'create_incident_screen.dart';
 import 'incident_detail_screen.dart';
 
 class IncidentsScreen extends StatefulWidget {
@@ -31,12 +33,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   int get _openCount => _incidents.where((incident) {
@@ -87,6 +84,28 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     await _loadIncidents(refreshing: true);
   }
 
+  Future<void> _openCreateIncident() async {
+    final createdIncident = await Navigator.push<IncidentRecord>(
+      context,
+      MaterialPageRoute(builder: (_) => const CreateIncidentScreen()),
+    );
+    if (!mounted || createdIncident == null) return;
+
+    setState(() {
+      _incidents = [
+        createdIncident,
+        ..._incidents.where((item) => item.id != createdIncident.id),
+      ];
+      _statusMessage = _t(
+        es: 'El incidente se creo por separado. Ahora puedes abrirlo y agregar evidencias cuando lo necesites.',
+        en: 'The incident was created separately. You can now open it and add evidence when needed.',
+        ay: 'Incidentex sapaki luratawa. Jichhax jist\'arasaw munasax evidencianak yapxatasma.',
+        qu: 'Incidenteqa sapallan ruwasqa karqan. Kunanqa kicharispa munaspayki evidenciakunata yapayta atinki.',
+      );
+      _isShowingCache = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,19 +148,40 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                       const SizedBox(height: 6),
                       Text(
                         _t(
-                          es:
-                              'Aqui se concentra el contexto de cada caso, las evidencias asociadas y la preparacion para una futura denuncia.',
-                          en:
-                              'Here you can find the context of each case, the linked evidence, and preparation for a future report.',
-                          ay:
-                              'Akan sapa cason contexto, mayachata evidencianaka ukat jutir denuncia wakicht\'awix tantachatawa.',
-                          qu:
-                              'Kaypi sapa kasopa contexto, tinkisqa evidenciakuna hinaspa hamuq denuncia wakichiy tantachisqa kashan.',
+                          es: 'Aqui se registra cada caso y su contexto. Las evidencias se vinculan despues, de forma explicita, desde el detalle del incidente o de la evidencia.',
+                          en: 'Each case and its context are recorded here. Evidence is linked later, explicitly, from the incident or evidence detail.',
+                          ay: 'Akan sapa cason contexto qillqt\'atawa. Evidencianakax qhipatwa chiqap mayachasi, incidente jan ukax evidencia detalle tuqita.',
+                          qu: 'Kaypi sapa kasopa contexton qillqasqa kashan. Evidenciakunaqa qhipaman, sut\'inchasqa llamk\'aywan, incidente utaq evidencia detallenninmanta tinkichisqa kan.',
                         ),
                         style: AppTheme.bodyMedium,
                       ),
                       const SizedBox(height: 20),
                     ],
+                    ActionPanelCard(
+                      icon: Icons.note_add_rounded,
+                      accentColor: AppTheme.warning,
+                      title: _t(
+                        es: 'Registrar un nuevo incidente',
+                        en: 'Register a new incident',
+                        ay: 'Machaq incidente qillqanta',
+                        qu: 'Musuq incidenteta qillqay',
+                      ),
+                      subtitle: _t(
+                        es: 'Crea el caso primero y organiza su contexto. Las evidencias se agregan despues, solo cuando decidas vincularlas.',
+                        en: 'Create the case first and organize its context. Evidence is added later only when you decide to link it.',
+                        ay: 'Nayraqata caso luram ukat contextop wakicht\'am. Evidencianakax qhipatwa yapxatata, mayachañ munasakixa.',
+                        qu: 'Ñawpaqta kasota ruway hinaspa contextonta allichay. Evidenciakunaqa qhipamanmi yapasqa kanqa, tinkichiyta munaspallayki chayqa.',
+                      ),
+                      actionLabel: _t(
+                        es: 'Crear incidente',
+                        en: 'Create incident',
+                        ay: 'Incidente lura',
+                        qu: 'Incidenteta ruway',
+                      ),
+                      actionIcon: Icons.add_rounded,
+                      onPressed: _openCreateIncident,
+                    ),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
@@ -198,14 +238,31 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            _t(
-                              es: 'Casos registrados',
-                              en: 'Registered cases',
-                              ay: 'Qillqt\'ata casos',
-                              qu: 'Qillqasqa casos',
-                            ),
-                            style: AppTheme.titleLarge,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _t(
+                                  es: 'Casos registrados',
+                                  en: 'Registered cases',
+                                  ay: 'Qillqt\'ata casos',
+                                  qu: 'Qillqasqa casos',
+                                ),
+                                style: AppTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _t(
+                                  es: 'Cada incidente vive como una entidad propia y mantiene su espacio para asociar evidencias sin mezclar el alta inicial.',
+                                  en: 'Each incident lives as its own entity and keeps its own space to associate evidence without mixing the initial registration.',
+                                  ay: 'Sapa incidentex sapakjamaw utji ukat evidencianak mayachañataki pachpa chiqaniwa, qallta qillqantawimpi jan chhaqhtayasa.',
+                                  qu: 'Sapa incidenteqa sapallan entidadmi kashan hinaspa evidenciakunata tinkichinapaq kikin rakinta waqaychan, qallariy qillqaywan mana chaqruspa.',
+                                ),
+                                style: AppTheme.bodyMedium.copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (_isRefreshing)
@@ -219,20 +276,6 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _t(
-                        es:
-                            'Cada incidente conserva su contexto completo y una seccion propia para evidencias y preparacion legal.',
-                        en:
-                            'Each incident keeps its full context and a dedicated section for evidence and legal preparation.',
-                        ay:
-                            'Sapa incidentex phuqhata contextop imaski ukat evidencia ukhamarak legal wakicht\'awitaki chiqa utji.',
-                        qu:
-                            'Sapa incidenteqa hunt\'asqa contextonta waqaychan, evidenciapaq hinaspa legal wakichinapaq rakisqa t\'uqta kan.',
-                      ),
-                      style: AppTheme.bodyMedium,
-                    ),
                     const SizedBox(height: 16),
                     if (_incidents.isEmpty)
                       EmptyStateCard(
@@ -244,14 +287,20 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                           qu: 'Manaraq incidentekuna kanchu',
                         ),
                         subtitle: _t(
-                          es:
-                              'Las evidencias pueden existir por separado. Cuando registres o recibas incidentes en tu flujo actual, apareceran aqui.',
-                          en:
-                              'Evidence can exist separately. When you register or receive incidents in your current flow, they will appear here.',
-                          ay:
-                              'Evidencianakax sapa maynjamaw utjaspa. Jichha thakhiman incidentenak qillqantasax jan ukax katuqkasax akan uñstaniwa.',
-                          qu:
-                              'Evidenciakunaqa sapallan kanman. Kunan puriyniykipi incidentekunata qillqaspayki utaq chaskispayki, kaypi rikurinqa.',
+                          es: 'Los incidentes se crean desde esta misma seccion. Cuando registres el primero, aqui se mantendra su contexto y luego podras vincularle evidencias.',
+                          en: 'Incidents are created from this same section. Once you register the first one, its context will stay here and you can link evidence afterwards.',
+                          ay: 'Incidentenakax aka pachpa seccionan lurasi. Nayriri qillqantasax, contextop akankaniwa ukat qhipat evidencianak mayachasmawa.',
+                          qu: 'Incidentekunaqa kay kikin seccionllapim ruwakun. Ñawpaqta qillqaspaykiqa, contextonqa kaypi kipakunqa hinaspa qhipaman evidenciakunata tinkichiyta atinki.',
+                        ),
+                        action: CustomButton(
+                          text: _t(
+                            es: 'Crear incidente',
+                            en: 'Create incident',
+                            ay: 'Incidente lura',
+                            qu: 'Incidenteta ruway',
+                          ),
+                          icon: Icons.note_add_rounded,
+                          onPressed: _openCreateIncident,
                         ),
                       )
                     else

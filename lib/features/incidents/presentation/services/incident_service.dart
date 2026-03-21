@@ -48,12 +48,7 @@ class IncidentService {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   Future<IncidentListResult> loadIncidents() async {
@@ -182,34 +177,128 @@ class IncidentService {
       return IncidentMutationResult(
         success: true,
         message:
-            '${_t(
-              es: 'Se guardo localmente.',
-              en: 'It was saved locally.',
-              ay: 'Localan imatawa.',
-              qu: 'Localpim waqaychasqa karqan.',
-            )} ${_t(
-              es: 'No se pudo sincronizar el incidente:',
-              en: 'The incident could not be synced:',
-              ay: 'Janiw incidentex sincronizañjamakiti:',
-              qu: 'Incidenteqa mana sincronizayta atikurqanchu:',
-            )} ${error.message}',
+            '${_t(es: 'Se guardo localmente.', en: 'It was saved locally.', ay: 'Localan imatawa.', qu: 'Localpim waqaychasqa karqan.')} ${_t(es: 'No se pudo sincronizar el incidente:', en: 'The incident could not be synced:', ay: 'Janiw incidentex sincronizañjamakiti:', qu: 'Incidenteqa mana sincronizayta atikurqanchu:')} ${error.message}',
         incident: updatedIncident,
       );
     } catch (_) {
       return IncidentMutationResult(
         success: true,
-        message: '${_t(
-          es: 'Se guardo localmente.',
-          en: 'It was saved locally.',
-          ay: 'Localan imatawa.',
-          qu: 'Localpim waqaychasqa karqan.',
-        )} ${_t(
-          es: 'No se pudo sincronizar el incidente.',
-          en: 'The incident could not be synced.',
-          ay: 'Janiw incidentex sincronizañjamakiti.',
-          qu: 'Incidenteqa mana sincronizayta atikurqanchu.',
-        )}',
+        message:
+            '${_t(es: 'Se guardo localmente.', en: 'It was saved locally.', ay: 'Localan imatawa.', qu: 'Localpim waqaychasqa karqan.')} ${_t(es: 'No se pudo sincronizar el incidente.', en: 'The incident could not be synced.', ay: 'Janiw incidentex sincronizañjamakiti.', qu: 'Incidenteqa mana sincronizayta atikurqanchu.')}',
         incident: updatedIncident,
+      );
+    }
+  }
+
+  Future<IncidentMutationResult> createIncident({
+    required String title,
+    String description = '',
+    String type = 'general',
+    String status = 'registrado',
+    String riskLevel = 'sin definir',
+    String location = '',
+    DateTime? occurredAt,
+  }) async {
+    final user = await _authService.getSession();
+    if (user == null) {
+      return IncidentMutationResult(
+        success: false,
+        message: _t(
+          es: 'No hay una sesion activa para crear incidentes.',
+          en: 'There is no active session to create incidents.',
+          ay: 'Janiw incidentenak lurañatakix sesion activa utjkiti.',
+          qu: 'Incidentekunata ruwanapaq sesion activaqa mana kanchu.',
+        ),
+      );
+    }
+
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      return IncidentMutationResult(
+        success: false,
+        message: _t(
+          es: 'Escribe un titulo para el incidente.',
+          en: 'Enter a title for the incident.',
+          ay: 'Incidentetaki maya titulo qillqt\'am.',
+          qu: 'Incidentepaqqa huk sutita qillqay.',
+        ),
+      );
+    }
+
+    final responseDate = (occurredAt ?? DateTime.now())
+        .toUtc()
+        .toIso8601String();
+
+    try {
+      final response = await _apiClient.postJson(
+        '/incidents',
+        accessToken: user.accessToken,
+        body: {
+          'titulo': normalizedTitle,
+          'descripcion': description.trim(),
+          'tipo_incidente': type.trim().isEmpty ? 'general' : type.trim(),
+          'fecha_incidente': responseDate,
+          'lugar': location.trim(),
+          'nivel_riesgo': riskLevel.trim().isEmpty
+              ? 'sin definir'
+              : riskLevel.trim(),
+          'estado': status.trim().isEmpty ? 'registrado' : status.trim(),
+        },
+      );
+
+      final createdIncident =
+          _extractIncidentDetail(response) ??
+          IncidentRecord(
+            id: '',
+            title: normalizedTitle,
+            description: description.trim(),
+            type: type.trim().isEmpty ? 'general' : type.trim(),
+            status: status.trim().isEmpty ? 'registrado' : status.trim(),
+            riskLevel: riskLevel.trim().isEmpty
+                ? 'sin definir'
+                : riskLevel.trim(),
+            location: location.trim(),
+            occurredAt: responseDate,
+          );
+
+      if (createdIncident.id.trim().isEmpty) {
+        return IncidentMutationResult(
+          success: false,
+          message: _t(
+            es: 'El servidor no devolvio un incidente valido.',
+            en: 'The server did not return a valid incident.',
+            ay: 'Servidorax janiw valido incidente kutt\'aykiti.',
+            qu: 'Servidorqa mana allin incidente kutichirqanchu.',
+          ),
+        );
+      }
+
+      await upsertCachedIncident(userId: user.id, incident: createdIncident);
+
+      return IncidentMutationResult(
+        success: true,
+        message: _t(
+          es: 'Incidente creado correctamente.',
+          en: 'Incident created successfully.',
+          ay: 'Incidentex wali sum luratawa.',
+          qu: 'Incidenteqa allinta ruwasqa karqan.',
+        ),
+        incident: createdIncident,
+      );
+    } on ApiException catch (error) {
+      return IncidentMutationResult(
+        success: false,
+        message: _mapCreateError(error),
+      );
+    } catch (_) {
+      return IncidentMutationResult(
+        success: false,
+        message: _t(
+          es: 'No se pudo crear el incidente.',
+          en: 'The incident could not be created.',
+          ay: 'Janiw incidente lurañjamakiti.',
+          qu: 'Incidenteqa mana ruwayta atikurqanchu.',
+        ),
       );
     }
   }
@@ -294,6 +383,20 @@ class IncidentService {
     return const <IncidentRecord>[];
   }
 
+  IncidentRecord? _extractIncidentDetail(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return IncidentRecord.fromBackendJson(data);
+    }
+    if (data is Map) {
+      return IncidentRecord.fromBackendJson(Map<String, dynamic>.from(data));
+    }
+    if (response['id'] != null) {
+      return IncidentRecord.fromBackendJson(response);
+    }
+    return null;
+  }
+
   String _mapLoadError(ApiException error) {
     final normalized = error.message.toLowerCase();
     if (normalized.contains('no se pudo conectar con el servidor')) {
@@ -301,8 +404,28 @@ class IncidentService {
         es: 'No se pudo actualizar el historial de incidentes. Revisa tu conexion.',
         en: 'The incident history could not be updated. Check your connection.',
         ay: 'Janiw incidenten historialapax machaqtayañjamakiti. Conexion uñakipam.',
-        qu:
-            'Incidente historiaykiqa mana musuqyachiyta atikurqanchu. Conexionniykita qhawariy.',
+        qu: 'Incidente historiaykiqa mana musuqyachiyta atikurqanchu. Conexionniykita qhawariy.',
+      );
+    }
+    return error.message;
+  }
+
+  String _mapCreateError(ApiException error) {
+    final normalized = error.message.toLowerCase();
+    if (normalized.contains('perfil no encontrado')) {
+      return _t(
+        es: 'La cuenta esta autenticada, pero no tiene perfil en el backend.',
+        en: 'The account is authenticated, but it does not have a backend profile.',
+        ay: 'Cuentax autenticatawa, ukampis backend ukanx janiw perfilani.',
+        qu: 'Cuentaqa autenticada kashan, ichaqa backendpi perfilninta mana kanchu.',
+      );
+    }
+    if (normalized.contains('no se pudo conectar con el servidor')) {
+      return _t(
+        es: 'No se pudo crear el incidente. Revisa tu conexion.',
+        en: 'The incident could not be created. Check your connection.',
+        ay: 'Janiw incidente lurañjamakiti. Conexion uñakipam.',
+        qu: 'Incidenteqa mana ruwayta atikurqanchu. Conexionniykita qhawariy.',
       );
     }
     return error.message;

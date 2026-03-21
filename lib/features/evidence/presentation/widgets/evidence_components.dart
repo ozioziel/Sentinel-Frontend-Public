@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
+import '../../../../shared/widgets/custom_button.dart';
 import '../../domain/models/evidence_record.dart';
 
 class EvidenceTypeStyle {
@@ -23,57 +24,32 @@ String _t({
   required String ay,
   required String qu,
 }) {
-  return AppLanguageService.instance.pick(
-    es: es,
-    en: en,
-    ay: ay,
-    qu: qu,
-  );
+  return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
 }
 
 EvidenceTypeStyle evidenceTypeStyleFor(String type) {
   switch (type.trim().toLowerCase()) {
     case 'audio':
       return EvidenceTypeStyle(
-        label: _t(
-          es: 'Audio',
-          en: 'Audio',
-          ay: 'Audio',
-          qu: 'Audio',
-        ),
+        label: _t(es: 'Audio', en: 'Audio', ay: 'Audio', qu: 'Audio'),
         icon: Icons.graphic_eq_rounded,
         color: Color(0xFF39B7A0),
       );
     case 'video':
       return EvidenceTypeStyle(
-        label: _t(
-          es: 'Video',
-          en: 'Video',
-          ay: 'Video',
-          qu: 'Video',
-        ),
+        label: _t(es: 'Video', en: 'Video', ay: 'Video', qu: 'Video'),
         icon: Icons.videocam_rounded,
         color: Color(0xFFE26C6C),
       );
     case 'imagen':
       return EvidenceTypeStyle(
-        label: _t(
-          es: 'Imagen',
-          en: 'Image',
-          ay: 'Imagen',
-          qu: 'Imagen',
-        ),
+        label: _t(es: 'Imagen', en: 'Image', ay: 'Imagen', qu: 'Imagen'),
         icon: Icons.image_rounded,
         color: Color(0xFF64A8FF),
       );
     case 'texto':
       return EvidenceTypeStyle(
-        label: _t(
-          es: 'Texto',
-          en: 'Text',
-          ay: 'Texto',
-          qu: 'Texto',
-        ),
+        label: _t(es: 'Texto', en: 'Text', ay: 'Texto', qu: 'Texto'),
         icon: Icons.notes_rounded,
         color: Color(0xFFB988FF),
       );
@@ -224,12 +200,7 @@ class EvidenceAssociationBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isAssociated ? AppTheme.success : AppTheme.warning;
     final label = isAssociated
-        ? _t(
-            es: 'Asociada',
-            en: 'Linked',
-            ay: 'Mayachata',
-            qu: 'Tinkisqa',
-          )
+        ? _t(es: 'Asociada', en: 'Linked', ay: 'Mayachata', qu: 'Tinkisqa')
         : _t(
             es: 'Sin incidente',
             en: 'No incident',
@@ -379,6 +350,82 @@ class SummaryMetricCard extends StatelessWidget {
           Text(value, style: AppTheme.headlineMedium),
           const SizedBox(height: 4),
           Text(label, style: AppTheme.bodyMedium.copyWith(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class ActionPanelCard extends StatelessWidget {
+  final IconData icon;
+  final Color accentColor;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final IconData actionIcon;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const ActionPanelCard({
+    super.key,
+    required this.icon,
+    required this.accentColor,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.actionIcon,
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [accentColor.withValues(alpha: 0.22), AppTheme.cardBg],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: accentColor.withValues(alpha: 0.32)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: accentColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTheme.titleLarge),
+                    const SizedBox(height: 6),
+                    Text(subtitle, style: AppTheme.bodyMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          CustomButton(
+            text: actionLabel,
+            icon: actionIcon,
+            isLoading: isLoading,
+            onPressed: onPressed,
+          ),
         ],
       ),
     );

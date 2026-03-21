@@ -33,12 +33,7 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   int get _associatedCount =>
@@ -84,13 +79,19 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
         ..._evidences.where((item) => item.id != createdEvidence.id),
       ];
       _statusMessage = _t(
-        es: 'La nueva evidencia ya aparece en tu bandeja.',
-        en: 'The new evidence already appears in your inbox.',
-        ay: 'Machaq evidenciax bandejaman uñstxiwa.',
-        qu: 'Musuq evidenciaqa bandejaykipi rikurimun.',
+        es: 'La evidencia se guardo sin incidente asociado. Puedes vincularla despues desde el selector del detalle.',
+        en: 'The evidence was saved without an associated incident. You can link it later from the detail selector.',
+        ay: 'Evidenciax janiw incidenter mayachatakiti imatawa. Detalleta selector tuqit qhipat mayachasmawa.',
+        qu: 'Evidenciaqa mana incidentewan tinkisqachu waqaychasqa karqan. Detallenninpi selector nisqamanta qhipaman tinkichiyta atinki.',
       );
       _isShowingCache = false;
     });
+
+    if (createdEvidence.id.trim().isEmpty) {
+      return;
+    }
+
+    await _openEvidenceDetail(createdEvidence);
   }
 
   Future<void> _openEvidenceDetail(EvidenceRecord evidence) async {
@@ -146,19 +147,40 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                       const SizedBox(height: 6),
                       Text(
                         _t(
-                          es:
-                              'Revisa, crea y organiza tus archivos sin depender de un incidente. Luego podras asociarlos cuando lo necesites.',
-                          en:
-                              'Review, create and organize your files without depending on an incident. You can link them later when needed.',
-                          ay:
-                              'Archivonakama uñakipa, lura ukat wakicht\'am janiw incidenter atiniskasa. Qhipat munasax mayachasmawa.',
-                          qu:
-                              'Archivoykikunata qhawariy, ruway hinaspa allichay mana incidenteman hapisqachu. Qhipaman munaspayki tinkichiyta atinki.',
+                          es: 'Revisa, crea y organiza tus archivos sin depender de un incidente. Luego podras asociarlos cuando lo necesites, siempre mediante una accion explicita.',
+                          en: 'Review, create and organize your files without depending on an incident. You can link them later when needed, always through an explicit action.',
+                          ay: 'Archivonakama uñakipa, lura ukat wakicht\'am janiw incidenter atiniskasa. Qhipat munasax chiqap mayachasmawa.',
+                          qu: 'Archivoykikunata qhawariy, ruway hinaspa allichay mana incidenteman hapisqachu. Qhipaman munaspayki sut\'inchasqa ruwanaswan tinkichiyta atinki.',
                         ),
                         style: AppTheme.bodyMedium,
                       ),
                       const SizedBox(height: 20),
                     ],
+                    ActionPanelCard(
+                      icon: Icons.upload_file_rounded,
+                      accentColor: AppTheme.primaryLight,
+                      title: _t(
+                        es: 'Registrar una nueva evidencia',
+                        en: 'Register new evidence',
+                        ay: 'Machaq evidencia qillqanta',
+                        qu: 'Musuq evidenciata qillqay',
+                      ),
+                      subtitle: _t(
+                        es: 'Guarda archivos por separado y decide despues si quieres relacionarlos con un incidente. No se vinculan automaticamente.',
+                        en: 'Save files separately and decide later if you want to relate them to an incident. They are not linked automatically.',
+                        ay: 'Archivonak sapaki imasim ukat qhipat amtañamawa incidente ukamp mayachañataki. Janiw automatico mayachatäkiti.',
+                        qu: 'Archivokunata sapallan waqaychay hinaspa qhipaman yuyay incidentewan tinkichinaykipaq. Mana automatico tinkisqachu kan.',
+                      ),
+                      actionLabel: _t(
+                        es: 'Crear evidencia',
+                        en: 'Create evidence',
+                        ay: 'Evidencia lura',
+                        qu: 'Evidencia ruway',
+                      ),
+                      actionIcon: Icons.add_rounded,
+                      onPressed: _openCreateScreen,
+                    ),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
@@ -230,14 +252,10 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 _t(
-                                  es:
-                                      'GET /evidences trae evidencias asociadas y no asociadas en el orden del backend.',
-                                  en:
-                                      'GET /evidences returns linked and unlinked evidence in backend order.',
-                                  ay:
-                                      'GET /evidences ukax mayachata ukat jan mayachata evidencianak backend ordenar apani.',
-                                  qu:
-                                      'GET /evidences nisqaqa tinkisqa mana tinkisqa evidenciakunata backend nisqapa ordenninpi kutichin.',
+                                  es: 'Las evidencias aparecen primero como archivos independientes. Desde el detalle puedes usar un selector desplegable para asociarlas cuando corresponda.',
+                                  en: 'Evidence appears first as independent files. From the detail you can use a dropdown selector to associate it when appropriate.',
+                                  ay: 'Evidencianakax nayraqata sapan archivonjamaw uñsti. Detalleta mä desplegable selectorampi kunapachatix wakiski ukhax mayachasmawa.',
+                                  qu: 'Evidenciakunaqa ñawpaqta sapallan archivokuna hina rikurimun. Detallenninmanta huk desplegable selectorwan maypachachus allin chayqa tinkichiyta atinki.',
                                 ),
                                 style: AppTheme.bodyMedium.copyWith(
                                   fontSize: 12,
@@ -258,18 +276,6 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                               ),
                             ),
                           ),
-                        CustomButton(
-                          text: _t(
-                            es: 'Nueva evidencia',
-                            en: 'New evidence',
-                            ay: 'Machaq evidencia',
-                            qu: 'Musuq evidencia',
-                          ),
-                          icon: Icons.add_rounded,
-                          fullWidth: false,
-                          height: 44,
-                          onPressed: _openCreateScreen,
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -283,14 +289,10 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                           qu: 'Manaraq evidenciakuna kanchu',
                         ),
                         subtitle: _t(
-                          es:
-                              'Ahora puedes subir archivos sin asociarlos a un incidente. Empieza creando tu primera evidencia.',
-                          en:
-                              'You can now upload files without linking them to an incident. Start by creating your first evidence item.',
-                          ay:
-                              'Jichhax archivonak incidenter jan mayachasaw apkatasma. Nayriri evidenciam lurañamp qallta.',
-                          qu:
-                              'Kunanqa archivokunata incidenteman mana tinkichispayki wichariyta atinki. Ñawpaq evidenciaykita ruwaspa qallariy.',
+                          es: 'Ahora puedes subir archivos sin asociarlos a un incidente. Cuando la guardes, podras decidir despues si quieres vincularla desde su detalle.',
+                          en: 'You can now upload files without linking them to an incident. Once saved, you can later decide whether to link it from its detail.',
+                          ay: 'Jichhax archivonak incidenter jan mayachasaw apkatasma. Imatax qhipat detalle tuqit mayachañ munasmati janicha uk amtasmawa.',
+                          qu: 'Kunanqa archivokunata incidenteman mana tinkichispayki wichariyta atinki. Waqaychasqaman qhipata detallenninmanta tinkichiyta munankichu manachu nispa akllayta atinki.',
                         ),
                         action: CustomButton(
                           text: _t(

@@ -38,12 +38,7 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   @override
@@ -212,14 +207,10 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
               const SizedBox(height: 8),
               Text(
                 _t(
-                  es:
-                      'Este flujo ya no obliga a elegir un incidente. Puedes registrar el archivo ahora y asociarlo despues.',
-                  en:
-                      'This flow no longer forces you to choose an incident. You can register the file now and link it later.',
-                  ay:
-                      'Aka thakhix janiw incident ajlliñ maykiti. Jichhax archivo qillqantasmawa ukat qhipat mayachasmawa.',
-                  qu:
-                      'Kay puriynaqa manan incidenteta akllanapaq obliganchu. Kunanqa archivota qillqayta atinki, qhipaman tinkichiyta atinki.',
+                  es: 'Este flujo ya no obliga a elegir un incidente. Puedes registrar el archivo ahora y asociarlo despues.',
+                  en: 'This flow no longer forces you to choose an incident. You can register the file now and link it later.',
+                  ay: 'Aka thakhix janiw incident ajlliñ maykiti. Jichhax archivo qillqantasmawa ukat qhipat mayachasmawa.',
+                  qu: 'Kay puriynaqa manan incidenteta akllanapaq obliganchu. Kunanqa archivota qillqayta atinki, qhipaman tinkichiyta atinki.',
                 ),
                 style: AppTheme.bodyMedium,
               ),
@@ -263,14 +254,10 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
                       Text(
                         _selectedFileName == null
                             ? _t(
-                                es:
-                                    'Imagen, video, audio o documento de hasta 20 MB.',
-                                en:
-                                    'Image, video, audio or document up to 20 MB.',
-                                ay:
-                                    'Imagen, video, audio jan ukax documento 20 MB ukjakama.',
-                                qu:
-                                    'Imagen, video, audio utaq documento 20 MB kama.',
+                                es: 'Imagen, video, audio o documento de hasta 20 MB.',
+                                en: 'Image, video, audio or document up to 20 MB.',
+                                ay: 'Imagen, video, audio jan ukax documento 20 MB ukjakama.',
+                                qu: 'Imagen, video, audio utaq documento 20 MB kama.',
                               )
                             : '${formatEvidenceSize(_selectedFileSize)} - ${p.extension(_selectedFileName!).replaceFirst('.', '').toUpperCase()}',
                         style: AppTheme.bodyMedium,
@@ -299,34 +286,19 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
                   DropdownMenuItem(
                     value: 'imagen',
                     child: Text(
-                      _t(
-                        es: 'Imagen',
-                        en: 'Image',
-                        ay: 'Imagen',
-                        qu: 'Imagen',
-                      ),
+                      _t(es: 'Imagen', en: 'Image', ay: 'Imagen', qu: 'Imagen'),
                     ),
                   ),
                   DropdownMenuItem(
                     value: 'video',
                     child: Text(
-                      _t(
-                        es: 'Video',
-                        en: 'Video',
-                        ay: 'Video',
-                        qu: 'Video',
-                      ),
+                      _t(es: 'Video', en: 'Video', ay: 'Video', qu: 'Video'),
                     ),
                   ),
                   DropdownMenuItem(
                     value: 'audio',
                     child: Text(
-                      _t(
-                        es: 'Audio',
-                        en: 'Audio',
-                        ay: 'Audio',
-                        qu: 'Audio',
-                      ),
+                      _t(es: 'Audio', en: 'Audio', ay: 'Audio', qu: 'Audio'),
                     ),
                   ),
                   DropdownMenuItem(
@@ -343,12 +315,7 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
                   DropdownMenuItem(
                     value: 'texto',
                     child: Text(
-                      _t(
-                        es: 'Texto',
-                        en: 'Text',
-                        ay: 'Texto',
-                        qu: 'Texto',
-                      ),
+                      _t(es: 'Texto', en: 'Text', ay: 'Texto', qu: 'Texto'),
                     ),
                   ),
                 ],
@@ -447,14 +414,10 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
                 ),
                 subtitle: Text(
                   _t(
-                    es:
-                        'Mantiene la evidencia identificada como informacion sensible.',
-                    en:
-                        'Keeps the evidence identified as sensitive information.',
-                    ay:
-                        'Evidenciax sensible informacionjam uñt\'ayatawa qhipara.',
-                    qu:
-                        'Evidenciaqa sensible informacion hina reqsisqa kachkan.',
+                    es: 'Mantiene la evidencia identificada como informacion sensible.',
+                    en: 'Keeps the evidence identified as sensitive information.',
+                    ay: 'Evidenciax sensible informacionjam uñt\'ayatawa qhipara.',
+                    qu: 'Evidenciaqa sensible informacion hina reqsisqa kachkan.',
                   ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -462,14 +425,10 @@ class _CreateEvidenceScreenState extends State<CreateEvidenceScreen> {
               const SizedBox(height: 18),
               StatusBanner(
                 message: _t(
-                  es:
-                      'La asociacion con incidentes se gestiona despues desde el detalle de la evidencia o desde el modulo de Incidentes.',
-                  en:
-                      'Association with incidents is managed later from the evidence detail or the Incidents module.',
-                  ay:
-                      'Incidentenakamp mayachawix qhipat evidencia detalle ukat jan ukax Incidentes modulo tuqit apnaqatawa.',
-                  qu:
-                      'Incidentekunawan asociacionqa qhipaman evidencia detallenninmanta utaq Incidentes modulo manta apanakun.',
+                  es: 'La asociacion con incidentes se gestiona despues desde el detalle de la evidencia, usando un selector desplegable y una accion de guardado explicita.',
+                  en: 'Association with incidents is managed later from the evidence detail, using a dropdown selector and an explicit save action.',
+                  ay: 'Incidentenakamp mayachawix qhipat evidencia detalle tuqit apnaqatawa, mä desplegable selectorampi ukat chiqap imañampiwa.',
+                  qu: 'Incidentekunawan asociacionqa qhipaman evidencia detallenninmanta apanakun, huk desplegable selectorwan hinaspa sut\'inchasqa waqaychaywan.',
                 ),
               ),
               const SizedBox(height: 24),
