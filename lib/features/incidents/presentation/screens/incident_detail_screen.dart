@@ -9,6 +9,7 @@ import '../../../evidence/presentation/services/evidence_service.dart';
 import '../../../evidence/presentation/widgets/evidence_components.dart';
 import '../../domain/models/incident_record.dart';
 import '../services/incident_service.dart';
+import '../services/legal_info_service.dart';
 
 class IncidentDetailScreen extends StatefulWidget {
   final IncidentRecord initialIncident;
@@ -22,6 +23,7 @@ class IncidentDetailScreen extends StatefulWidget {
 class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   final IncidentService _incidentService = IncidentService();
   final EvidenceService _evidenceService = EvidenceService();
+  final LegalInfoService _legalInfoService = LegalInfoService();
 
   late IncidentRecord _incident;
   List<EvidenceRecord> _allEvidences = [];
@@ -31,6 +33,11 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   bool _isSavingIncident = false;
   bool _isUpdatingAssociation = false;
   String? _statusMessage;
+
+  List<LegalLaw> _legalLaws = [];
+  bool _isLoadingLegal = false;
+  bool _legalLoaded = false;
+  String? _legalError;
 
   String _t({
     required String es,
@@ -258,6 +265,36 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadLegalInfo() async {
+    final evidencia = [
+      _incident.title,
+      _incident.description,
+      ..._incidentEvidences.map((e) => e.description).where((d) => d.trim().isNotEmpty),
+    ].join('. ');
+
+    setState(() {
+      _isLoadingLegal = true;
+      _legalError = null;
+    });
+
+    final result = await _legalInfoService.fetchApplicableLaws(
+      evidencia: evidencia,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingLegal = false;
+      _legalLoaded = true;
+      if (result.success) {
+        _legalLaws = result.leyes;
+        _legalError = null;
+      } else {
+        _legalLaws = [];
+        _legalError = result.errorMessage;
+      }
+    });
   }
 
   void _showSnackBar(String message) {
@@ -641,48 +678,186 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                         const SizedBox(width: 10),
                         Text(
                           _t(
-                            es: 'Panel reservado',
-                            en: 'Reserved panel',
-                            ay: 'Apnaqañatak katxarata panel',
-                            qu: 'Waqaychasqa panel',
+                            es: 'Marco legal aplicable',
+                            en: 'Applicable legal framework',
+                            ay: 'Aplicable legal marco',
+                            qu: 'Aplicable legal marco',
                           ),
                           style: AppTheme.titleLarge,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _t(
-                        es:
-                            'Aqui se integrara la capa legal futura: resumen del caso, instituciones sugeridas segun contexto, checklist de envio y soporte RAG/backend.',
-                        en:
-                            'The future legal layer will be integrated here: case summary, suggested institutions by context, sending checklist and RAG/backend support.',
-                        ay:
-                            'Akanwa jutir legal capa integrasini: caso resumen, contextoarjama sugerita instituciones, apayañ checklist ukat RAG/backend yanapa.',
-                        qu:
-                            'Kaypim hamuq legal capa integrasqa kanqa: kaso resumen, contexto hina sugerisqa instituciones, apachiy checklist hinaspa RAG/backend yanapay.',
+                    const SizedBox(height: 16),
+                    if (!_legalLoaded && !_isLoadingLegal)
+                      CustomButton(
+                        text: _t(
+                          es: 'Analizar marco legal',
+                          en: 'Analyze legal framework',
+                          ay: 'Legal marco analizam',
+                          qu: 'Legal marcota analizay',
+                        ),
+                        icon: Icons.auto_awesome_rounded,
+                        variant: ButtonVariant.outline,
+                        onPressed: _loadLegalInfo,
                       ),
-                      style: AppTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    StatusBanner(
-                      message: _t(
-                        es:
-                            'TODO: conectar informacion legal contextual y estado de denuncias automaticas.',
-                        en:
-                            'TODO: connect contextual legal information and the status of automatic reports.',
-                        ay:
-                            'TODO: contextual legal informacion ukat automatico denuncianakan estadopa mayacha.',
-                        qu:
-                            'TODO: contextual legal informacionta hinaspa automatico denunciakunapa estadonta tinkichiy.',
+                    if (_isLoadingLegal)
+                      Column(
+                        children: [
+                          const LinearProgressIndicator(
+                            color: AppTheme.primary,
+                            backgroundColor: AppTheme.divider,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _t(
+                              es: 'Consultando base legal...',
+                              en: 'Querying legal database...',
+                              ay: 'Legal base jiskt\'ataski...',
+                              qu: 'Legal baseta tapunaykishan...',
+                            ),
+                            style: AppTheme.bodyMedium,
+                          ),
+                        ],
                       ),
-                    ),
+                    if (_legalLoaded && !_isLoadingLegal) ...[
+                      if (_legalError != null) ...[
+                        StatusBanner(message: _legalError!),
+                        const SizedBox(height: 12),
+                        CustomButton(
+                          text: _t(
+                            es: 'Reintentar',
+                            en: 'Retry',
+                            ay: 'Wasit yant\'am',
+                            qu: 'Yapamanta yant\'ay',
+                          ),
+                          icon: Icons.refresh_rounded,
+                          variant: ButtonVariant.outline,
+                          onPressed: _loadLegalInfo,
+                        ),
+                      ] else if (_legalLaws.isEmpty)
+                        Text(
+                          _t(
+                            es: 'No se encontraron leyes aplicables para este caso.',
+                            en: 'No applicable laws were found for this case.',
+                            ay: 'Aka kasotakix janiw aplicable leynakax jikxatakiti.',
+                            qu: 'Kay kasopaqqa mana aplicable leykuna tarisqachu karqan.',
+                          ),
+                          style: AppTheme.bodyMedium,
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (int i = 0; i < _legalLaws.length; i++) ...[
+                              if (i > 0) const SizedBox(height: 14),
+                              _LegalLawCard(law: _legalLaws[i]),
+                            ],
+                            const SizedBox(height: 14),
+                            CustomButton(
+                              text: _t(
+                                es: 'Actualizar analisis',
+                                en: 'Refresh analysis',
+                                ay: 'Analisis machaqtaya',
+                                qu: 'Analisisni musuqyachiy',
+                              ),
+                              icon: Icons.refresh_rounded,
+                              variant: ButtonVariant.ghost,
+                              onPressed: _loadLegalInfo,
+                            ),
+                          ],
+                        ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LegalLawCard extends StatelessWidget {
+  final LegalLaw law;
+
+  const _LegalLawCard({required this.law});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            law.ley,
+            style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+          ),
+          if (law.articulos.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: law.articulos
+                  .map(
+                    (art) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        art,
+                        style: AppTheme.bodyMedium.copyWith(
+                          fontSize: 12,
+                          color: AppTheme.primaryLight,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (law.descripcionBreve.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(law.descripcionBreve, style: AppTheme.bodyMedium),
+          ],
+          if (law.porQueAplica.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: AppTheme.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    law.porQueAplica,
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
