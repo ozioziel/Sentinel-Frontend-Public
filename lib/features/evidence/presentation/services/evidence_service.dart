@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -427,6 +428,9 @@ class EvidenceService {
     required String? incidentId,
   }) async {
     final user = await _authService.getSession();
+    final normalizedEvidenceId = evidence.id.trim();
+    final normalizedIncidentId = _normalizeNullableId(incidentId);
+
     if (user == null) {
       return EvidenceMutationResult(
         success: false,
@@ -439,33 +443,81 @@ class EvidenceService {
       );
     }
 
-    if (_isLocalId(evidence.id) || _isLocalId(incidentId)) {
+    if (normalizedEvidenceId.isEmpty) {
+      return EvidenceMutationResult(
+        success: false,
+        message: _t(
+          es: 'La evidencia no tiene un identificador valido para sincronizar su asociacion.',
+          en: 'The evidence does not have a valid identifier to sync its association.',
+          ay: 'Evidenciax janiw valido identificadoranix asociacion sincronizañataki.',
+          qu: 'Evidenciaqa mana allin identificadoryuqchu asociacionninta sincronizanapaq.',
+        ),
+      );
+    }
+
+    if (_isLocalId(normalizedIncidentId)) {
+      return EvidenceMutationResult(
+        success: false,
+        message: _t(
+          es: 'El incidente seleccionado aun no esta sincronizado con el servidor. Espera a que se registre y vuelve a intentarlo.',
+          en: 'The selected incident is not yet synced with the server. Wait for it to be registered and try again.',
+          ay: 'Ajllita incidentex janiw servidorampi sincronizatakiti. Qillqantatañap suyt\'am ukat wasitat yant\'am.',
+          qu: 'Akllasqa incidenteqa manaraqmi servidorwan sincronizakunchu. Qillqasqa kananpaq suyay hinaspa yapamanta yant\'ay.',
+        ),
+      );
+    }
+
+    if (_isLocalId(normalizedEvidenceId)) {
+      if (normalizedIncidentId == null) {
+        return _saveAssociationLocally(
+          userId: user.id,
+          evidence: evidence,
+          incidentId: null,
+        );
+      }
+
+      return EvidenceMutationResult(
+        success: false,
+        message: _t(
+          es: 'La evidencia aun no esta sincronizada con el servidor. Cuando termine de registrarse podras asociarla a un incidente.',
+          en: 'The evidence is not yet synced with the server. Once it finishes registering, you will be able to link it to an incident.',
+          ay: 'Evidenciax janiw servidorampi sincronizatakiti. Qillqantasiñ tukuyatatxa incidenteru mayachasmawa.',
+          qu: 'Evidenciaqa manaraqmi servidorwan sincronizakunchu. Qillqakuyta tukuruptinmi incidenteman tinkichiyta atinki.',
+        ),
+      );
+    }
+
+    if (normalizedIncidentId == null && _isLocalId(evidence.incidentId)) {
       return _saveAssociationLocally(
         userId: user.id,
         evidence: evidence,
-        incidentId: incidentId,
+        incidentId: null,
       );
     }
 
     try {
-      final response = await _apiClient.putJson(
-        '/evidences/${evidence.id}/incident',
-        accessToken: user.accessToken,
-        body: {'incident_id': incidentId},
+      final response = await _retryWithBackoff(
+        () => _apiClient.putJson(
+          '/evidences/$normalizedEvidenceId/incident',
+          accessToken: user.accessToken,
+          body: {'incident_id': normalizedIncidentId},
+        ),
+        (error) => error is ApiException && _isSchemaCacheError(error),
+        3, // Máximo 3 reintentos
       );
 
       final updatedEvidence =
           _extractEvidenceDetail(response) ??
           evidence.copyWith(
-            incidentId: incidentId,
-            clearIncidentId: incidentId == null,
+            incidentId: normalizedIncidentId,
+            clearIncidentId: normalizedIncidentId == null,
           );
 
       await upsertCachedEvidence(userId: user.id, evidence: updatedEvidence);
 
       return EvidenceMutationResult(
         success: true,
-        message: incidentId == null
+        message: normalizedIncidentId == null
             ? _t(
                 es: 'La evidencia quedo sin incidente asociado.',
                 en: 'The evidence was left without an associated incident.',
@@ -481,11 +533,40 @@ class EvidenceService {
         evidence: updatedEvidence,
       );
     } on ApiException catch (error) {
-      if (_isSchemaCacheError(error)) {
-        return _saveAssociationLocally(
+      final confirmedEvidence = await _confirmAssociationState(
+        accessToken: user.accessToken,
+        evidenceId: normalizedEvidenceId,
+        expectedIncidentId: normalizedIncidentId,
+      );
+      if (confirmedEvidence != null) {
+        await upsertCachedEvidence(
           userId: user.id,
-          evidence: evidence,
-          incidentId: incidentId,
+          evidence: confirmedEvidence,
+        );
+        return EvidenceMutationResult(
+          success: true,
+          message: _associationSuccessMessage(normalizedIncidentId),
+          evidence: confirmedEvidence,
+        );
+      }
+
+      if (_isSchemaCacheError(error)) {
+        if (normalizedIncidentId == null) {
+          return _saveAssociationLocally(
+            userId: user.id,
+            evidence: evidence,
+            incidentId: null,
+          );
+        }
+
+        return EvidenceMutationResult(
+          success: false,
+          message: _t(
+            es: 'No se pudo sincronizar la asociacion con el incidente porque el servidor esta actualizando su esquema. Reintenta en unos minutos.',
+            en: 'The association with the incident could not be synced because the server is updating its schema. Try again in a few minutes.',
+            ay: 'Servidorax esquema machaqt\'ayaskipanwa incidente mayachawix janiw sincronizaskaspati. Mä juk\'a minutonakat qhipat wasitat yant\'am.',
+            qu: 'Servidorqa esquemanta musuqyachisqanrayku incidentewan asociacionqa mana sincronizakuyta atikurqanchu. Huk chhika minutokunamanta qhipaman yapamanta yant\'ay.',
+          ),
         );
       }
 
@@ -686,6 +767,31 @@ class EvidenceService {
     }
 
     final normalized = error.message.toLowerCase();
+    if (_isGenericHttpError(error, statusCode: 400)) {
+      return _t(
+        es: 'El servidor rechazo la asociacion de la evidencia (HTTP 400). El endpoint PUT /evidences/:id/incident no esta aceptando la solicitud correctamente.',
+        en: 'The server rejected the evidence association (HTTP 400). The PUT /evidences/:id/incident endpoint is not accepting the request correctly.',
+        ay: 'Servidorax evidencia mayachawiruxa janiw katuqkiti (HTTP 400). PUT /evidences/:id/incident endpoint ukax mayiw sum katuqkiti.',
+        qu: 'Servidorqa evidencia asociacionta mana chaskirqanchu (HTTP 400). PUT /evidences/:id/incident endpoint nisqaqa mañakuyta mana allintachu chaskishan.',
+      );
+    }
+    if (_isGenericHttpError(error, statusCode: 404)) {
+      return _t(
+        es: 'El endpoint de asociacion PUT /evidences/:id/incident no esta disponible en el servidor actual.',
+        en: 'The PUT /evidences/:id/incident association endpoint is not available on the current server.',
+        ay: 'PUT /evidences/:id/incident endpoint ukax jichha servidoranx janiw utjkiti.',
+        qu: 'PUT /evidences/:id/incident endpoint nisqaqa kay servidorpin mana kanchu.',
+      );
+    }
+    if (normalized.contains('uuid invalido') ||
+        normalized.contains('invalid input syntax for type uuid')) {
+      return _t(
+        es: 'El identificador del incidente o de la evidencia no tiene un formato UUID valido.',
+        en: 'The incident or evidence identifier does not have a valid UUID format.',
+        ay: 'Incidente jan ukax evidencia identificadorapax janiw UUID valido formato niykiti.',
+        qu: 'Incidente utaq evidencia identificadorninqa mana allin UUID formato niyuqchu.',
+      );
+    }
     if (normalized.contains('incidente no encontrado')) {
       return _t(
         es: 'No se encontro el incidente seleccionado.',
@@ -786,14 +892,54 @@ class EvidenceService {
         normalized.contains('schema_cache') ||
         normalized.contains('pgrst204') ||
         normalized.contains('pgrst205') ||
-        normalized.contains('could not find') ||
+        (normalized.contains('could not find') &&
+            (normalized.contains('schema') ||
+                normalized.contains('column') ||
+                normalized.contains('relation'))) ||
         normalized.contains('no se encontro la columna') ||
         normalized.contains('no se encontro la relacion');
+  }
+
+  Future<T> _retryWithBackoff<T>(
+    Future<T> Function() operation,
+    bool Function(dynamic) isRetryableError,
+    int maxRetries,
+  ) async {
+    int attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        return await operation();
+      } catch (error) {
+        attempt++;
+        if (attempt >= maxRetries || !isRetryableError(error)) {
+          rethrow;
+        }
+        // Backoff exponencial: 1s, 2s, 4s, etc.
+        final delay = Duration(seconds: 1 << (attempt - 1));
+        await Future.delayed(delay);
+      }
+    }
+    throw Exception('Max retries exceeded');
+  }
+
+  bool _isGenericHttpError(ApiException error, {required int statusCode}) {
+    final normalized = error.message.trim().toLowerCase();
+    return error.statusCode == statusCode &&
+        (normalized.isEmpty ||
+            normalized == 'error del servidor.' ||
+            normalized == 'operacion fallida.' ||
+            normalized == 'server error.' ||
+            normalized == 'operation failed.');
   }
 
   bool _isLocalId(String? value) {
     final normalized = (value ?? '').trim();
     return normalized.startsWith('local-');
+  }
+
+  String? _normalizeNullableId(String? value) {
+    final normalized = (value ?? '').trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   String _buildLocalEvidenceId() {
@@ -807,6 +953,50 @@ class EvidenceService {
     required String qu,
   }) {
     return _t(es: es, en: en, ay: ay, qu: qu);
+  }
+
+  String _associationSuccessMessage(String? incidentId) {
+    return incidentId == null
+        ? _t(
+            es: 'La evidencia quedo sin incidente asociado.',
+            en: 'The evidence was left without an associated incident.',
+            ay: 'Evidenciax janiw incidenter mayachatakiti.',
+            qu: 'Evidenciaqa mana incidentewan tinkisqachu kipakun.',
+          )
+        : _t(
+            es: 'La evidencia ahora esta asociada al incidente.',
+            en: 'The evidence is now associated with the incident.',
+            ay: 'Evidenciax jichhax incidenter mayachatawa.',
+            qu: 'Evidenciaqa kunanqa incidentewan tinkisqa kashan.',
+          );
+  }
+
+  Future<EvidenceRecord?> _confirmAssociationState({
+    required String accessToken,
+    required String evidenceId,
+    required String? expectedIncidentId,
+  }) async {
+    try {
+      final response = await _apiClient.getJson(
+        '/evidences/$evidenceId',
+        accessToken: accessToken,
+      );
+      final refreshedEvidence = _extractEvidenceDetail(response);
+      if (refreshedEvidence == null) {
+        return null;
+      }
+
+      final normalizedRefreshedIncidentId = _normalizeNullableId(
+        refreshedEvidence.incidentId,
+      );
+      if (normalizedRefreshedIncidentId == expectedIncidentId) {
+        return refreshedEvidence;
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
   }
 
   Future<EvidenceMutationResult> _saveAssociationLocally({

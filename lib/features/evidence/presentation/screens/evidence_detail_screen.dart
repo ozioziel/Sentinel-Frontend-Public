@@ -51,6 +51,37 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   bool get _hasAssociationChanges =>
       _selectedIncidentId != _evidence.incidentId;
 
+  bool _isPendingSyncId(String? value) {
+    final normalized = (value ?? '').trim();
+    return normalized.isNotEmpty && normalized.startsWith('local-');
+  }
+
+  String? get _associationBlockedMessage {
+    if (_selectedIncidentId == null) {
+      return null;
+    }
+
+    if (_evidence.id.trim().isEmpty || _isPendingSyncId(_evidence.id)) {
+      return _t(
+        es: 'Esta evidencia todavia no esta sincronizada con el servidor. Cuando termine de registrarse podras asociarla a un incidente.',
+        en: 'This evidence is not yet synced with the server. Once it finishes registering, you will be able to link it to an incident.',
+        ay: 'Aka evidenciax janirakiw servidorampi sincronizatakiti. Qillqantasiñ tukuyatatxa incidenteru mayachasmawa.',
+        qu: 'Kay evidenciaqa manaraqmi servidorwan sincronizakunchu. Qillqakuyta tukuruptinmi incidenteman tinkichiyta atinki.',
+      );
+    }
+
+    if (_isPendingSyncId(_selectedIncidentId)) {
+      return _t(
+        es: 'El incidente seleccionado todavia no esta sincronizado con el servidor, asi que no puede recibir evidencias aun.',
+        en: 'The selected incident is not yet synced with the server, so it cannot receive evidence yet.',
+        ay: 'Ajllita incidentex janirakiw servidorampi sincronizatakiti, ukhamax janiw evidencianak katuqkaspati.',
+        qu: 'Akllasqa incidenteqa manaraqmi servidorwan sincronizakunchu, chayrayku manaraqmi evidenciakunata chaskiyta atinchu.',
+      );
+    }
+
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +130,13 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
 
   Future<void> _saveAssociation() async {
     if (!_hasAssociationChanges) {
+      return;
+    }
+
+    final blockedMessage = _associationBlockedMessage;
+    if (blockedMessage != null) {
+      setState(() => _statusMessage = blockedMessage);
+      _showSnackBar(blockedMessage);
       return;
     }
 
@@ -194,8 +232,14 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
 
     items.addAll(
       _incidents.map(
-        (incident) =>
-            DropdownMenuItem(value: incident.id, child: Text(incident.title)),
+        (incident) => DropdownMenuItem(
+          value: incident.id,
+          child: Text(
+            _isPendingSyncId(incident.id)
+                ? '${incident.title} (${_t(es: 'pendiente de sincronizacion', en: 'pending sync', ay: 'sincronizacion suyt\'ata', qu: 'sincronizacion suyasqa')})'
+                : incident.title,
+          ),
+        ),
       ),
     );
 
@@ -391,6 +435,13 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (_associationBlockedMessage != null) ...[
+                      StatusBanner(
+                        message: _associationBlockedMessage!,
+                        isWarning: true,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     StatusBanner(
                       message: _selectedIncidentId == null
                           ? _t(
@@ -427,7 +478,9 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                           : Icons.save_outlined,
                       isLoading: _isUpdatingAssociation,
                       onPressed:
-                          (!_hasAssociationChanges || _isLoadingIncidents)
+                          (!_hasAssociationChanges ||
+                              _isLoadingIncidents ||
+                              _associationBlockedMessage != null)
                           ? null
                           : _saveAssociation,
                     ),

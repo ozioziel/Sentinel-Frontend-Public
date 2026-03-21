@@ -482,7 +482,10 @@ class IncidentService {
         normalized.contains('schema_cache') ||
         normalized.contains('pgrst204') ||
         normalized.contains('pgrst205') ||
-        normalized.contains('could not find') ||
+        (normalized.contains('could not find') &&
+            (normalized.contains('schema') ||
+                normalized.contains('column') ||
+                normalized.contains('relation'))) ||
         normalized.contains('no se encontro la columna') ||
         normalized.contains('no se encontro la relacion');
   }
