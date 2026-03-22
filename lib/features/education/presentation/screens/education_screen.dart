@@ -7,7 +7,6 @@ import '../../domain/models/education_pet_state.dart';
 import '../../domain/models/education_topic.dart';
 import '../services/education_pet_service.dart';
 import '../widgets/education_empty_state.dart';
-import '../widgets/education_library_intro_card.dart';
 import '../widgets/education_pet_hub_entry_card.dart';
 import '../widgets/education_topic_card.dart';
 import 'education_companion_screen.dart';
@@ -118,12 +117,6 @@ class _EducationScreenState extends State<EducationScreen> {
                       petState: _petState,
                       isLoading: _isLoadingPet,
                       onTap: _openCompanion,
-                    ),
-                    const SizedBox(height: 24),
-                    EducationLibraryIntroCard(
-                      totalTopics: EducationTopicsCatalog.topics.length,
-                      visibleTopics: visibleTopics.length,
-                      isFiltering: isFiltering,
                     ),
                     const SizedBox(height: 24),
                     Container(

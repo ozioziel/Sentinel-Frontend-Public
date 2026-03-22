@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
-import '../../../../shared/widgets/mascot_image.dart';
+
 
 class EducationTextBlockCard extends StatelessWidget {
   final List<String> textBlocks;
@@ -121,24 +121,13 @@ class _CenteredMascotSpeaker extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          const Positioned.fill(
-            child: MascotImage(
-              width: 118,
-              height: 118,
-              padding: EdgeInsets.fromLTRB(10, 16, 10, 22),
-              semanticsLabel: 'Mascota educativa hablando',
-            ),
-          ),
-          Positioned(
-            bottom: 18,
-            child: Text(
-              AppLanguageService.instance.pick(
-                es: 'Tu mascota te guia',
-                en: 'Your mascot guides you',
-              ),
-              style: AppTheme.labelLarge.copyWith(
-                color: AppTheme.textPrimary.withValues(alpha: 0.92),
-                fontSize: 11,
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 16, 10, 22),
+              child: Image.asset(
+                'assets/images/garabato_informacion/perrocaja.png',
+                fit: BoxFit.contain,
+                semanticLabel: 'Mascota educativa hablando',
               ),
             ),
           ),

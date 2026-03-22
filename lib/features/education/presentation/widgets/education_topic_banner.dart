@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
-import '../../../../shared/widgets/mascot_image.dart';
 import '../../domain/models/education_topic.dart';
 
 class EducationTopicBanner extends StatelessWidget {
@@ -139,12 +138,14 @@ class _MascotBadge extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          const Positioned.fill(
-            child: MascotImage(
-              width: 84,
-              height: 84,
-              padding: EdgeInsets.fromLTRB(6, 8, 6, 14),
-              semanticsLabel: 'Mascota educativa',
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 8, 6, 14),
+              child: Image.asset(
+                'assets/images/garabato_informacion/perrocaja.png',
+                fit: BoxFit.contain,
+                semanticLabel: 'Mascota educativa',
+              ),
             ),
           ),
           const Positioned(

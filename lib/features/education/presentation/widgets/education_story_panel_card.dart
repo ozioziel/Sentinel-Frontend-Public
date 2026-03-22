@@ -21,76 +21,19 @@ class EducationStoryPanelCard extends StatelessWidget {
         panel.imageAssetPath != null && panel.imageAssetPath!.trim().isNotEmpty;
 
     return CustomCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: panel.color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  index == 0
-                      ? context.tr('education.detail.main_comic')
-                      : context.tr(
-                          'education.detail.step',
-                          params: {'number': '${index + 1}'},
-                        ),
-                  style: TextStyle(
-                    color: panel.color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(panel.eyebrow, style: AppTheme.bodyMedium),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (hasImage)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                color: panel.color.withValues(alpha: 0.08),
-                child: Image.asset(
-                  panel.imageAssetPath!,
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  semanticLabel: panel.imageSemanticLabel ?? panel.title,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _VisualPlaceholder(panel: panel);
-                  },
-                ),
-              ),
-            )
-          else
-            _VisualPlaceholder(panel: panel),
-          const SizedBox(height: 16),
-          Text(panel.title, style: AppTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(panel.caption, style: AppTheme.bodyLarge.copyWith(fontSize: 15)),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.surface.withValues(alpha: 0.34),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.divider),
-            ),
-            child: Text(panel.footer, style: AppTheme.bodyMedium),
-          ),
-        ],
+      padding: const EdgeInsets.all(0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: hasImage
+            ? Image.asset(
+                panel.imageAssetPath!,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                semanticLabel: panel.imageSemanticLabel ?? panel.title,
+                errorBuilder: (context, error, stackTrace) =>
+                    _VisualPlaceholder(panel: panel),
+              )
+            : _VisualPlaceholder(panel: panel),
       ),
     );
   }
