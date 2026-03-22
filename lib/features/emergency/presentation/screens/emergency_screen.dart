@@ -8,6 +8,7 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_design_theme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
+import '../../../auth/presentation/models/contact_model.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
 import '../services/emergency_alert_service.dart';

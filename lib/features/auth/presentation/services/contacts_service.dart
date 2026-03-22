@@ -2,105 +2,11 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/services/offline_sync_service.dart';
 import '../../../../core/network/api_client.dart';
+import '../models/contact_model.dart';
 import 'auth_identity_mapper.dart';
 import 'auth_service.dart';
-
-class ContactModel {
-  final String id;
-  final String name;
-  final String phone;
-  final String? email;
-  final String relation;
-  final String? alternativePhone;
-  final int priority;
-  final bool canReceiveAlerts;
-
-  const ContactModel({
-    required this.id,
-    required this.name,
-    required this.phone,
-    this.email,
-    required this.relation,
-    this.alternativePhone,
-    this.priority = 1,
-    this.canReceiveAlerts = true,
-  });
-
-  ContactModel copyWith({
-    String? id,
-    String? name,
-    String? phone,
-    String? email,
-    String? relation,
-    String? alternativePhone,
-    int? priority,
-    bool? canReceiveAlerts,
-  }) {
-    return ContactModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      relation: relation ?? this.relation,
-      alternativePhone: alternativePhone ?? this.alternativePhone,
-      priority: priority ?? this.priority,
-      canReceiveAlerts: canReceiveAlerts ?? this.canReceiveAlerts,
-    );
-  }
-
-  Map<String, dynamic> toBackendPayload() => {
-    'nombre_completo': name.trim(),
-    'parentesco': relation.trim().isEmpty ? null : relation.trim(),
-    'telefono': AuthIdentityMapper.normalizePhone(phone),
-    'telefono_alternativo': _normalizeNullablePhone(alternativePhone),
-    'prioridad': priority,
-    'puede_recibir_alertas': canReceiveAlerts,
-  };
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'phone': phone,
-    'email': email,
-    'relation': relation,
-    'telefono_alternativo': alternativePhone,
-    'prioridad': priority,
-    'puede_recibir_alertas': canReceiveAlerts,
-  };
-
-  factory ContactModel.fromJson(Map<String, dynamic> json) => ContactModel(
-    id: _readString(json['id']),
-    name: _readString(
-      json['nombre_completo'],
-      fallback: _readString(json['name']),
-    ),
-    phone: _readString(json['telefono'], fallback: _readString(json['phone'])),
-    email: _readNullableEmail(
-      json['correo_electronico'],
-      fallback: _readNullableEmail(json['email']),
-    ),
-    relation: _readString(
-      json['parentesco'],
-      fallback: _readString(
-        json['relation'],
-        fallback: 'Contacto de emergencia',
-      ),
-    ),
-    alternativePhone: _readNullableString(json['telefono_alternativo']),
-    priority: _readInt(json['prioridad'], fallback: 1),
-    canReceiveAlerts: _readBool(json['puede_recibir_alertas'], fallback: true),
-  );
-
-  static String? _normalizeNullablePhone(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return null;
-    }
-
-    final normalized = AuthIdentityMapper.normalizePhone(value);
-    return normalized.isEmpty ? null : normalized;
-  }
-}
 
 class ContactsService {
   static const _contactsCachePrefix = 'contacts_cache_';
@@ -135,7 +41,8 @@ class ContactsService {
       final contacts =
           data
               .map(
-                (item) => ContactModel.fromJson(Map<String, dynamic>.from(item)),
+                (item) =>
+                    ContactModel.fromJson(Map<String, dynamic>.from(item)),
               )
               .toList()
             ..sort((a, b) => a.priority.compareTo(b.priority));
@@ -179,12 +86,19 @@ class ContactsService {
       return false;
     }
 
+    final localContact = ContactModel(
+      id: _buildLocalContactId(),
+      name: name.trim(),
+      phone: normalizedPhone,
+      email: email,
+      relation: relation.trim().isEmpty
+          ? 'Contacto de emergencia'
+          : relation.trim(),
+      priority: contacts.length + 1,
+    );
+
     try {
-      await _upsertLocalEmail(
-        userId,
-        phone: normalizedPhone,
-        email: email,
-      );
+      await _upsertLocalEmail(userId, phone: normalizedPhone, email: email);
       await _apiClient.postJson(
         '/contacts',
         accessToken: session.accessToken,
@@ -201,8 +115,17 @@ class ContactsService {
       );
       await _refreshCache(userId);
       return true;
-    } catch (_) {
-      return false;
+    } catch (error) {
+      if (!_shouldSaveLocally(error)) {
+        return false;
+      }
+
+      await _saveContactLocally(userId, localContact);
+      await OfflineSyncService.instance.enqueueCreateContact(
+        userId: userId,
+        contact: localContact,
+      );
+      return true;
     }
   }
 
@@ -227,27 +150,47 @@ class ContactsService {
       return false;
     }
 
+    final previousContact = contacts.cast<ContactModel?>().firstWhere(
+      (contact) => contact?.id == updated.id,
+      orElse: () => null,
+    );
+    if (previousContact != null) {
+      await _removeLocalEmailEntries(userId, previousContact);
+    }
+    final normalizedContact = updated.copyWith(phone: normalizedPhone);
+    await _upsertLocalEmail(userId, contact: normalizedContact);
+    await _upsertCachedContact(userId, normalizedContact);
+
+    if (_isLocalId(normalizedContact.id)) {
+      await OfflineSyncService.instance.enqueueUpdateContact(
+        userId: userId,
+        contact: normalizedContact,
+      );
+      return true;
+    }
+
     try {
-      final previousContact = contacts.cast<ContactModel?>().firstWhere(
-        (contact) => contact?.id == updated.id,
-        orElse: () => null,
-      );
-      if (previousContact != null) {
-        await _removeLocalEmailEntries(userId, previousContact);
-      }
-      await _upsertLocalEmail(
-        userId,
-        contact: updated.copyWith(phone: normalizedPhone),
-      );
       await _apiClient.putJson(
         '/contacts/${updated.id}',
         accessToken: session.accessToken,
-        body: updated.copyWith(phone: normalizedPhone).toBackendPayload(),
+        body: normalizedContact.toBackendPayload(),
       );
       await _refreshCache(userId);
       return true;
-    } catch (_) {
-      return false;
+    } catch (error) {
+      if (!_shouldSaveLocally(error)) {
+        if (previousContact != null) {
+          await _upsertLocalEmail(userId, contact: previousContact);
+          await _upsertCachedContact(userId, previousContact);
+        }
+        return false;
+      }
+
+      await OfflineSyncService.instance.enqueueUpdateContact(
+        userId: userId,
+        contact: normalizedContact,
+      );
+      return true;
     }
   }
 
@@ -257,24 +200,46 @@ class ContactsService {
       return false;
     }
 
+    final cachedContacts = await _loadCachedContacts(userId);
+    final removedContact = cachedContacts.cast<ContactModel?>().firstWhere(
+      (contact) => contact?.id == contactId,
+      orElse: () => null,
+    );
+    if (removedContact != null) {
+      await _removeLocalEmailEntries(userId, removedContact);
+    }
+    cachedContacts.removeWhere((contact) => contact.id == contactId);
+    await _saveCachedContacts(userId, cachedContacts);
+
+    if (_isLocalId(contactId)) {
+      await OfflineSyncService.instance.enqueueDeleteContact(
+        userId: userId,
+        contactId: contactId,
+      );
+      return true;
+    }
+
     try {
       await _apiClient.deleteJson(
         '/contacts/$contactId',
         accessToken: session.accessToken,
       );
-      final cachedContacts = await _loadCachedContacts(userId);
-      final removedContact = cachedContacts.cast<ContactModel?>().firstWhere(
-        (contact) => contact?.id == contactId,
-        orElse: () => null,
-      );
-      if (removedContact != null) {
-        await _removeLocalEmailEntries(userId, removedContact);
-      }
-      cachedContacts.removeWhere((contact) => contact.id == contactId);
-      await _saveCachedContacts(userId, cachedContacts);
       return true;
-    } catch (_) {
-      return false;
+    } catch (error) {
+      if (!_shouldSaveLocally(error)) {
+        if (removedContact != null) {
+          await _upsertLocalEmail(userId, contact: removedContact);
+          cachedContacts.insert(0, removedContact);
+          await _saveCachedContacts(userId, cachedContacts);
+        }
+        return false;
+      }
+
+      await OfflineSyncService.instance.enqueueDeleteContact(
+        userId: userId,
+        contactId: contactId,
+      );
+      return true;
     }
   }
 
@@ -339,7 +304,7 @@ class ContactsService {
     try {
       final decoded = Map<String, dynamic>.from(jsonDecode(raw) as Map);
       return decoded.map(
-        (key, value) => MapEntry(key, _readString(value)),
+        (key, value) => MapEntry(key, readContactString(value)),
       )..removeWhere((key, value) => value.trim().isEmpty);
     } catch (_) {
       return <String, String>{};
@@ -361,7 +326,7 @@ class ContactsService {
     String? email,
   }) async {
     final prefs = await _loadLocalEmails(userId);
-    final normalizedEmail = _normalizeNullableEmail(email ?? contact?.email);
+    final normalizedEmail = normalizeNullableEmail(email ?? contact?.email);
     final keys = contact != null
         ? _emailAliasesForContact(contact)
         : _emailAliasesForPhone(phone);
@@ -461,62 +426,42 @@ class ContactsService {
       jsonEncode(contacts.map((contact) => contact.toJson()).toList()),
     );
   }
-}
 
-String _readString(dynamic value, {String fallback = ''}) {
-  if (value is String) {
-    return value;
-  }
-  if (value == null) {
-    return fallback;
-  }
-  return value.toString();
-}
-
-String? _readNullableString(dynamic value) {
-  final stringValue = _readString(value);
-  return stringValue.trim().isEmpty ? null : stringValue;
-}
-
-String? _readNullableEmail(dynamic value, {String? fallback}) {
-  final normalized = _normalizeNullableEmail(_readString(value));
-  if (normalized != null) {
-    return normalized;
+  Future<void> _saveContactLocally(String userId, ContactModel contact) async {
+    await _upsertLocalEmail(userId, contact: contact);
+    await _upsertCachedContact(userId, contact);
   }
 
-  return _normalizeNullableEmail(fallback);
-}
-
-int _readInt(dynamic value, {int fallback = 0}) {
-  if (value is int) {
-    return value;
-  }
-  if (value is num) {
-    return value.toInt();
-  }
-  return int.tryParse(_readString(value)) ?? fallback;
-}
-
-bool _readBool(dynamic value, {bool fallback = false}) {
-  if (value is bool) {
-    return value;
-  }
-  final normalized = _readString(value).toLowerCase();
-  if (normalized == 'true') {
-    return true;
-  }
-  if (normalized == 'false') {
-    return false;
-  }
-  return fallback;
-}
-
-String? _normalizeNullableEmail(String? value) {
-  final trimmed = (value ?? '').trim().toLowerCase();
-  if (trimmed.isEmpty) {
-    return null;
+  Future<void> _upsertCachedContact(String userId, ContactModel contact) async {
+    final contacts = await _loadCachedContacts(userId);
+    final index = contacts.indexWhere((item) => item.id == contact.id);
+    if (index == -1) {
+      contacts.add(contact);
+    } else {
+      contacts[index] = contact;
+    }
+    contacts.sort((a, b) => a.priority.compareTo(b.priority));
+    await _saveCachedContacts(userId, contacts);
   }
 
-  final isValid = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(trimmed);
-  return isValid ? trimmed : null;
+  bool _shouldSaveLocally(Object error) {
+    if (error is! Exception) {
+      return true;
+    }
+
+    final normalized = error.toString().toLowerCase();
+    return normalized.contains('no se pudo conectar con el servidor') ||
+        normalized.contains('schema cache') ||
+        normalized.contains('schema_cache') ||
+        normalized.contains('pgrst204') ||
+        normalized.contains('pgrst205');
+  }
+
+  bool _isLocalId(String id) {
+    return id.trim().startsWith('local-');
+  }
+
+  String _buildLocalContactId() {
+    return 'local-contact-${DateTime.now().microsecondsSinceEpoch}';
+  }
 }

@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/services/offline_sync_service.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../domain/models/evidence_record.dart';
 
@@ -377,6 +378,36 @@ class EvidenceService {
         evidence: storedEvidence,
       );
     } on ApiException catch (error) {
+      if (_shouldSaveLocally(error)) {
+        final localEvidence = _buildLocalEvidence(
+          filePath: filePath,
+          resolvedType: resolvedType,
+          mimeType: mimeType,
+          title: title,
+          description: description,
+          takenAt: takenAt,
+          isPrivate: isPrivate,
+          sizeBytes: sizeBytes,
+        );
+
+        await upsertCachedEvidence(userId: user.id, evidence: localEvidence);
+        await OfflineSyncService.instance.enqueueCreateEvidence(
+          userId: user.id,
+          evidence: localEvidence,
+        );
+
+        return EvidenceMutationResult(
+          success: true,
+          message: _t(
+            es: 'La evidencia se guardo localmente y se sincronizara cuando vuelva la conexion.',
+            en: 'The evidence was saved locally and will sync when the connection returns.',
+            ay: 'Evidenciax localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+            qu: 'Evidenciaqa localpim waqaychasqa karqan hinaspa conexion kutimuptin sincronizakunqa.',
+          ),
+          evidence: localEvidence,
+        );
+      }
+
       if (_isSchemaCacheError(error)) {
         final localEvidence = EvidenceRecord(
           id: _buildLocalEvidenceId(),
@@ -417,50 +448,33 @@ class EvidenceService {
         message: _mapCreateError(error),
       );
     } catch (_) {
-      // Error inesperado (ej: timeout de red). Guardar localmente como respaldo
-      // para que el SOS no pierda la evidencia grabada.
-      try {
-        final localEvidence = EvidenceRecord(
-          id: _buildLocalEvidenceId(),
-          title: title?.trim().isNotEmpty == true
-              ? title!.trim()
-              : p.basename(filePath),
-          description: description?.trim() ?? '',
-          type:
-              resolvedType ??
-              _inferEvidenceType(mimeType, filePath) ??
-              'documento',
-          createdAt: DateTime.now().toUtc().toIso8601String(),
-          takenAt: takenAt?.toUtc().toIso8601String() ?? '',
-          incidentId: null,
-          fileUrl: filePath,
-          fileName: p.basename(filePath),
-          mimeType: mimeType,
-          isPrivate: isPrivate,
-          sizeBytes: sizeBytes,
-        );
-        await upsertCachedEvidence(userId: user.id, evidence: localEvidence);
-        return EvidenceMutationResult(
-          success: true,
-          message: _t(
-            es: 'La evidencia se guardo solo en este dispositivo. Vuelve a intentarlo cuando tengas conexion.',
-            en: 'The evidence was saved only on this device. Try again when you have a connection.',
-            ay: 'Evidenciax aka dispositivon sapaki imatawa. Conexion utjirisax wasitat yant\'am.',
-            qu: 'Evidenciaqa kay dispositivollapim waqaychasqa karqan. Conexion kaptinmi yapamanta yant\'anki.',
-          ),
-          evidence: localEvidence,
-        );
-      } catch (_) {
-        return EvidenceMutationResult(
-          success: false,
-          message: _t(
-            es: 'No se pudo crear la evidencia.',
-            en: 'The evidence could not be created.',
-            ay: 'Janiw evidencia lurañjamakiti.',
-            qu: 'Evidenciaqa mana ruwayta atikurqanchu.',
-          ),
-        );
-      }
+      final localEvidence = _buildLocalEvidence(
+        filePath: filePath,
+        resolvedType: resolvedType,
+        mimeType: mimeType,
+        title: title,
+        description: description,
+        takenAt: takenAt,
+        isPrivate: isPrivate,
+        sizeBytes: sizeBytes,
+      );
+
+      await upsertCachedEvidence(userId: user.id, evidence: localEvidence);
+      await OfflineSyncService.instance.enqueueCreateEvidence(
+        userId: user.id,
+        evidence: localEvidence,
+      );
+
+      return EvidenceMutationResult(
+        success: true,
+        message: _t(
+          es: 'La evidencia se guardo localmente y se sincronizara cuando vuelva la conexion.',
+          en: 'The evidence was saved locally and will sync when the connection returns.',
+          ay: 'Evidenciax localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+          qu: 'Evidenciaqa localpim waqaychasqa karqan hinaspa conexion kutimuptin sincronizakunqa.',
+        ),
+        evidence: localEvidence,
+      );
     }
   }
 
@@ -493,6 +507,17 @@ class EvidenceService {
           ay: 'Evidenciax janiw valido identificadoranix asociacion sincronizañataki.',
           qu: 'Evidenciaqa mana allin identificadoryuqchu asociacionninta sincronizanapaq.',
         ),
+      );
+    }
+
+    if (_isLocalId(normalizedEvidenceId) ||
+        _isLocalId(normalizedIncidentId) ||
+        (normalizedIncidentId == null && _isLocalId(evidence.incidentId))) {
+      return _saveAssociationLocally(
+        userId: user.id,
+        evidence: evidence,
+        incidentId: normalizedIncidentId,
+        queueForSync: true,
       );
     }
 
@@ -591,6 +616,15 @@ class EvidenceService {
         );
       }
 
+      if (_shouldSaveLocally(error)) {
+        return _saveAssociationLocally(
+          userId: user.id,
+          evidence: evidence,
+          incidentId: normalizedIncidentId,
+          queueForSync: true,
+        );
+      }
+
       if (_isSchemaCacheError(error)) {
         if (normalizedIncidentId == null) {
           return _saveAssociationLocally(
@@ -616,14 +650,11 @@ class EvidenceService {
         message: _mapAssociationError(error),
       );
     } catch (_) {
-      return EvidenceMutationResult(
-        success: false,
-        message: _t(
-          es: 'No se pudo actualizar la asociacion de la evidencia.',
-          en: 'The evidence association could not be updated.',
-          ay: 'Janiw evidencia mayachawix machaqtayañjamakiti.',
-          qu: 'Evidenciawan asociacionninqa mana musuqyachiyta atikurqanchu.',
-        ),
+      return _saveAssociationLocally(
+        userId: user.id,
+        evidence: evidence,
+        incidentId: normalizedIncidentId,
+        queueForSync: true,
       );
     }
   }
@@ -931,6 +962,35 @@ class EvidenceService {
     return null;
   }
 
+  EvidenceRecord _buildLocalEvidence({
+    required String filePath,
+    required String? resolvedType,
+    required String mimeType,
+    required String? title,
+    required String? description,
+    required DateTime? takenAt,
+    required bool isPrivate,
+    required int sizeBytes,
+  }) {
+    return EvidenceRecord(
+      id: _buildLocalEvidenceId(),
+      title: title?.trim().isNotEmpty == true
+          ? title!.trim()
+          : p.basename(filePath),
+      description: description?.trim() ?? '',
+      type:
+          resolvedType ?? _inferEvidenceType(mimeType, filePath) ?? 'documento',
+      createdAt: DateTime.now().toUtc().toIso8601String(),
+      takenAt: takenAt?.toUtc().toIso8601String() ?? '',
+      incidentId: null,
+      fileUrl: filePath,
+      fileName: p.basename(filePath),
+      mimeType: mimeType,
+      isPrivate: isPrivate,
+      sizeBytes: sizeBytes,
+    );
+  }
+
   bool _isSchemaCacheError(ApiException error) {
     final detailsText = error.details?.toString() ?? '';
     final normalized = '${error.message} $detailsText'.toLowerCase();
@@ -944,6 +1004,13 @@ class EvidenceService {
                 normalized.contains('relation'))) ||
         normalized.contains('no se encontro la columna') ||
         normalized.contains('no se encontro la relacion');
+  }
+
+  bool _shouldSaveLocally(ApiException error) {
+    final normalized = '${error.message} ${error.details ?? ''}'.toLowerCase();
+    return _isSchemaCacheError(error) ||
+        normalized.contains('no se pudo conectar con el servidor') ||
+        (error.statusCode != null && error.statusCode! >= 500);
   }
 
   Future<T> _retryWithBackoff<T>(
@@ -1049,6 +1116,7 @@ class EvidenceService {
     required String userId,
     required EvidenceRecord evidence,
     required String? incidentId,
+    bool queueForSync = false,
   }) async {
     final updatedEvidence = evidence.copyWith(
       incidentId: incidentId,
@@ -1057,9 +1125,24 @@ class EvidenceService {
 
     await upsertCachedEvidence(userId: userId, evidence: updatedEvidence);
 
+    if (queueForSync) {
+      await OfflineSyncService.instance.enqueueEvidenceAssociation(
+        userId: userId,
+        evidenceId: evidence.id,
+        incidentId: incidentId,
+      );
+    }
+
     return EvidenceMutationResult(
       success: true,
-      message: incidentId == null
+      message: queueForSync
+          ? _t(
+              es: 'La asociacion de la evidencia se guardo localmente y se sincronizara cuando vuelva la conexion.',
+              en: 'The evidence association was saved locally and will sync when the connection returns.',
+              ay: 'Evidencia mayachawix localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+              qu: 'Evidencia asociacionninqa localpim waqaychasqa karqan hinaspa conexion kutimuptin sincronizakunqa.',
+            )
+          : incidentId == null
           ? _t(
               es: 'La evidencia quedo sin incidente asociado en este dispositivo.',
               en: 'The evidence was left without an associated incident on this device.',

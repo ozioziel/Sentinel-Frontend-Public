@@ -6,6 +6,7 @@ import 'core/localization/app_language_service.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/theme/app_design_theme.dart';
 import 'core/routes/app_routes.dart';
+import 'core/widgets/offline_sync_recovery_scope.dart';
 import 'features/auth/presentation/screens/session_gate_screen.dart';
 import 'features/emergency/presentation/widgets/emergency_alert_recovery_scope.dart';
 
@@ -37,10 +38,13 @@ class SentinelApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
               builder: (context, child) {
-                return EmergencyAlertRecoveryScope(
+                return OfflineSyncRecoveryScope(
                   scaffoldMessengerKey: _scaffoldMessengerKey,
-                  child: AppDesignMotion(
-                    child: child ?? const SizedBox.shrink(),
+                  child: EmergencyAlertRecoveryScope(
+                    scaffoldMessengerKey: _scaffoldMessengerKey,
+                    child: AppDesignMotion(
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   ),
                 );
               },

@@ -6,6 +6,7 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../../core/services/app_branding_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
+import '../../../auth/presentation/models/contact_model.dart';
 import '../../../auth/presentation/screens/contacts_screen.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
@@ -144,7 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _user?.city ?? context.tr('profile.location_fallback'),
+                            _user?.city ??
+                                context.tr('profile.location_fallback'),
                             style: AppTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
@@ -173,13 +175,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _ProfileInfoRow(
                             icon: Icons.alternate_email_rounded,
                             label: context.tr('profile.email_label'),
-                            value: _user?.email ?? context.tr('profile.email_empty'),
+                            value:
+                                _user?.email ??
+                                context.tr('profile.email_empty'),
                           ),
                           const SizedBox(height: 12),
                           _ProfileInfoRow(
                             icon: Icons.phone_outlined,
                             label: context.tr('profile.phone_label'),
-                            value: _user?.phone ?? context.tr('profile.phone_empty'),
+                            value:
+                                _user?.phone ??
+                                context.tr('profile.phone_empty'),
                           ),
                         ],
                       ),
@@ -250,10 +256,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             const SizedBox(height: 2),
                                             Text(
                                               contact.relation,
-                                              style: AppTheme.bodyMedium.copyWith(
-                                                fontSize: 11,
-                                                color: AppTheme.primary,
-                                              ),
+                                              style: AppTheme.bodyMedium
+                                                  .copyWith(
+                                                    fontSize: 11,
+                                                    color: AppTheme.primary,
+                                                  ),
                                             ),
                                             const SizedBox(height: 1),
                                             Text(
@@ -261,7 +268,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               style: AppTheme.bodyMedium
                                                   .copyWith(fontSize: 12),
                                             ),
-                                            if ((contact.email ?? '').isNotEmpty)
+                                            if ((contact.email ?? '')
+                                                .isNotEmpty)
                                               Padding(
                                                 padding: const EdgeInsets.only(
                                                   top: 2,
@@ -271,9 +279,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   style: AppTheme.bodyMedium
                                                       .copyWith(
                                                         fontSize: 12,
-                                                        color:
-                                                            AppTheme
-                                                                .textSecondary,
+                                                        color: AppTheme
+                                                            .textSecondary,
                                                       ),
                                                 ),
                                               ),

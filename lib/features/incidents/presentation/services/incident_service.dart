@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/services/offline_sync_service.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../domain/models/incident_record.dart';
 
@@ -83,7 +84,7 @@ class IncidentService {
             ? _t(
                 es: 'Todavia no tienes incidentes registrados.',
                 en: 'You do not have any registered incidents yet.',
-                ay: 'Jichhakamax janiw qillqt\'ata incidentenakam utjkiti.',
+                ay: 'Jichhakamax janiw qillqtata incidentenakam utjkiti.',
                 qu: 'Manaraq incidenteykikuna qillqasqachu kashan.',
               )
             : null,
@@ -146,8 +147,25 @@ class IncidentService {
         message: _t(
           es: 'Los cambios se guardaron solo en este dispositivo.',
           en: 'The changes were saved only on this device.',
-          ay: 'Mayjt\'awinakax aka dispositivon sapaki imatawa.',
+          ay: 'Mayjtawinakax aka dispositivon sapaki imatawa.',
           qu: 'Tukuy tikraykunaqa kay dispositivollapim waqaychasqa karqan.',
+        ),
+        incident: updatedIncident,
+      );
+    }
+
+    if (_isLocalId(updatedIncident.id)) {
+      await OfflineSyncService.instance.enqueueUpdateIncident(
+        userId: user.id,
+        incident: updatedIncident,
+      );
+      return IncidentMutationResult(
+        success: true,
+        message: _t(
+          es: 'Los cambios se guardaron localmente y se sincronizaran cuando vuelva la conexion.',
+          en: 'The changes were saved locally and will sync when the connection returns.',
+          ay: 'Mayjtawinakax localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+          qu: 'Tikraykunaqa localpim waqaychasqa kashan hinaspa conexion kutimuptin sincronizakunqa.',
         ),
         incident: updatedIncident,
       );
@@ -174,6 +192,19 @@ class IncidentService {
         incident: updatedIncident,
       );
     } on ApiException catch (error) {
+      if (_shouldSaveLocally(error)) {
+        await OfflineSyncService.instance.enqueueUpdateIncident(
+          userId: user.id,
+          incident: updatedIncident,
+        );
+        return IncidentMutationResult(
+          success: true,
+          message:
+              '${_t(es: 'Se guardo localmente.', en: 'It was saved locally.', ay: 'Localan imatawa.', qu: 'Localpim waqaychasqa karqan.')} ${_t(es: 'Se sincronizara cuando vuelva la conexion.', en: 'It will sync when the connection returns.', ay: 'Conexion kuttanxasax sincronizataniwa.', qu: 'Conexion kutimuptinmi sincronizakunqa.')}',
+          incident: updatedIncident,
+        );
+      }
+
       return IncidentMutationResult(
         success: true,
         message:
@@ -181,10 +212,14 @@ class IncidentService {
         incident: updatedIncident,
       );
     } catch (_) {
+      await OfflineSyncService.instance.enqueueUpdateIncident(
+        userId: user.id,
+        incident: updatedIncident,
+      );
       return IncidentMutationResult(
         success: true,
         message:
-            '${_t(es: 'Se guardo localmente.', en: 'It was saved locally.', ay: 'Localan imatawa.', qu: 'Localpim waqaychasqa karqan.')} ${_t(es: 'No se pudo sincronizar el incidente.', en: 'The incident could not be synced.', ay: 'Janiw incidentex sincronizañjamakiti.', qu: 'Incidenteqa mana sincronizayta atikurqanchu.')}',
+            '${_t(es: 'Se guardo localmente.', en: 'It was saved locally.', ay: 'Localan imatawa.', qu: 'Localpim waqaychasqa karqan.')} ${_t(es: 'Se sincronizara cuando vuelva la conexion.', en: 'It will sync when the connection returns.', ay: 'Conexion kuttanxasax sincronizataniwa.', qu: 'Conexion kutimuptinmi sincronizakunqa.')}',
         incident: updatedIncident,
       );
     }
@@ -219,7 +254,7 @@ class IncidentService {
         message: _t(
           es: 'Escribe un titulo para el incidente.',
           en: 'Enter a title for the incident.',
-          ay: 'Incidentetaki maya titulo qillqt\'am.',
+          ay: 'Incidentetaki maya titulo qillqtam.',
           qu: 'Incidentepaqqa huk sutita qillqay.',
         ),
       );
@@ -267,7 +302,7 @@ class IncidentService {
           message: _t(
             es: 'El servidor no devolvio un incidente valido.',
             en: 'The server did not return a valid incident.',
-            ay: 'Servidorax janiw valido incidente kutt\'aykiti.',
+            ay: 'Servidorax janiw valido incidente kuttaykiti.',
             qu: 'Servidorqa mana allin incidente kutichirqanchu.',
           ),
         );
@@ -286,7 +321,7 @@ class IncidentService {
         incident: createdIncident,
       );
     } on ApiException catch (error) {
-      if (_isSchemaCacheError(error)) {
+      if (_shouldSaveLocally(error)) {
         final localIncident = IncidentRecord(
           id: _buildLocalIncidentId(),
           title: normalizedTitle,
@@ -299,14 +334,18 @@ class IncidentService {
         );
 
         await upsertCachedIncident(userId: user.id, incident: localIncident);
+        await OfflineSyncService.instance.enqueueCreateIncident(
+          userId: user.id,
+          incident: localIncident,
+        );
 
         return IncidentMutationResult(
           success: true,
           message: _t(
-            es: 'El incidente se guardo solo en este dispositivo mientras el servidor actualiza su esquema.',
-            en: 'The incident was saved only on this device while the server refreshes its schema.',
-            ay: 'Servidorax esquema machaqt\'ayaskipanx incidentex aka dispositivon sapaki imatawa.',
-            qu: 'Servidorqa esquema musuqyachishankama incidenteqa kay dispositivollapim waqaychasqa karqan.',
+            es: 'El incidente se guardo localmente y se sincronizara cuando vuelva la conexion.',
+            en: 'The incident was saved locally and will sync when the connection returns.',
+            ay: 'Incidentex localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+            qu: 'Incidenteqa localpim waqaychasqa karqan hinaspa conexion kutimuptin sincronizakunqa.',
           ),
           incident: localIncident,
         );
@@ -317,14 +356,32 @@ class IncidentService {
         message: _mapCreateError(error),
       );
     } catch (_) {
+      final localIncident = IncidentRecord(
+        id: _buildLocalIncidentId(),
+        title: normalizedTitle,
+        description: description.trim(),
+        type: type.trim().isEmpty ? 'violencia' : type.trim(),
+        status: status.trim().isEmpty ? 'registrado' : status.trim(),
+        riskLevel: riskLevel.trim().isEmpty ? 'medio' : riskLevel.trim(),
+        location: location.trim(),
+        occurredAt: responseDate,
+      );
+
+      await upsertCachedIncident(userId: user.id, incident: localIncident);
+      await OfflineSyncService.instance.enqueueCreateIncident(
+        userId: user.id,
+        incident: localIncident,
+      );
+
       return IncidentMutationResult(
-        success: false,
+        success: true,
         message: _t(
-          es: 'No se pudo crear el incidente.',
-          en: 'The incident could not be created.',
-          ay: 'Janiw incidente lurañjamakiti.',
-          qu: 'Incidenteqa mana ruwayta atikurqanchu.',
+          es: 'El incidente se guardo localmente y se sincronizara cuando vuelva la conexion.',
+          en: 'The incident was saved locally and will sync when the connection returns.',
+          ay: 'Incidentex localan imatawa ukat conexion kuttanxasax sincronizataniwa.',
+          qu: 'Incidenteqa localpim waqaychasqa karqan hinaspa conexion kutimuptin sincronizakunqa.',
         ),
+        incident: localIncident,
       );
     }
   }
@@ -428,7 +485,7 @@ class IncidentService {
       return _t(
         es: 'El servidor esta actualizando el esquema de incidentes. Si tienes datos locales, se mostraran mientras tanto.',
         en: 'The server is refreshing the incident schema. If you have local data, it will be shown in the meantime.',
-        ay: 'Servidorax incidentenakan esquemap machaqt\'ayaski. Local datonakax utjchi ukhax ukañkamaw uñstani.',
+        ay: 'Servidorax incidentenakan esquemap machaqtayaski. Local datonakax utjchi ukhax ukañkamaw uñstani.',
         qu: 'Servidorqa incidentekunapa esquemanta musuqyachishan. Local datokuna kaptinqa, chaykamallam rikuchisqa kanqa.',
       );
     }
@@ -450,8 +507,8 @@ class IncidentService {
       return _t(
         es: 'El servidor esta actualizando el esquema de incidentes. Reintenta en unos minutos si necesitas sincronizar.',
         en: 'The server is refreshing the incident schema. Retry in a few minutes if you need to sync.',
-        ay: 'Servidorax incidentenakan esquemap machaqt\'ayaski. Sincronizañ munasax mä juk\'a minutonakat qhipat wasitat yant\'am.',
-        qu: 'Servidorqa incidentekunapa esquemanta musuqyachishan. Sincronizayta munaspaykiqa huk chhika minutokunamanta qhipaman yapamanta yant\'ay.',
+        ay: 'Servidorax incidentenakan esquemap machaqtayaski. Sincronizañ munasax maya juka minutonakat qhipat wasitat yantam.',
+        qu: 'Servidorqa incidentekunapa esquemanta musuqyachishan. Sincronizayta munaspaykiqa huk chhika minutokunamanta qhipaman yapamanta yantay.',
       );
     }
 
@@ -488,6 +545,17 @@ class IncidentService {
                 normalized.contains('relation'))) ||
         normalized.contains('no se encontro la columna') ||
         normalized.contains('no se encontro la relacion');
+  }
+
+  bool _shouldSaveLocally(ApiException error) {
+    final normalized = '${error.message} ${error.details ?? ''}'.toLowerCase();
+    return _isSchemaCacheError(error) ||
+        normalized.contains('no se pudo conectar con el servidor') ||
+        (error.statusCode != null && error.statusCode! >= 500);
+  }
+
+  bool _isLocalId(String id) {
+    return id.trim().startsWith('local-');
   }
 
   String _buildLocalIncidentId() {

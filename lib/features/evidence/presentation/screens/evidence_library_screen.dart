@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../emergency/presentation/services/emergency_capture_service.dart';
 import '../../domain/models/evidence_record.dart';
 import '../services/evidence_service.dart';
 import '../widgets/evidence_components.dart';
@@ -20,12 +21,15 @@ class EvidenceLibraryScreen extends StatefulWidget {
 
 class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
   final EvidenceService _service = EvidenceService();
+  final EmergencyCaptureService _captureService = EmergencyCaptureService();
 
   List<EvidenceRecord> _evidences = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _statusMessage;
   bool _isShowingCache = false;
+  bool _isRecordingEvidence = false;
+  bool _isUploadingRecording = false;
 
   String _t({
     required String es,
@@ -102,6 +106,103 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
     );
     if (!mounted) return;
     await _loadEvidences(refreshing: true);
+  }
+
+  Future<void> _startEvidenceRecording() async {
+    if (_isRecordingEvidence || _isUploadingRecording) return;
+
+    final result = await _captureService.startEmergencyCapture();
+    if (!mounted) return;
+
+    for (final issue in result.issues) {
+      _showSnackBar(issue);
+    }
+
+    if (!result.videoStarted) return;
+
+    setState(() => _isRecordingEvidence = true);
+  }
+
+  Future<void> _stopEvidenceRecording() async {
+    if (!_isRecordingEvidence || _isUploadingRecording) return;
+
+    final now = DateTime.now();
+
+    setState(() {
+      _isRecordingEvidence = false;
+      _isUploadingRecording = true;
+    });
+
+    final stopResult = await _captureService.stopEmergencyCapture();
+    if (!mounted) return;
+
+    for (final issue in stopResult.issues) {
+      _showSnackBar(issue);
+    }
+
+    final videoPath = stopResult.videoPath;
+    if (videoPath == null || videoPath.isEmpty) {
+      setState(() => _isUploadingRecording = false);
+      _showSnackBar(
+        _t(
+          es: 'No se pudo guardar el video grabado.',
+          en: 'The recorded video could not be saved.',
+          ay: 'Grabata videox janiw imañjamakiti.',
+          qu: 'Grabado videota mana waqaychayta atikurqanchu.',
+        ),
+      );
+      return;
+    }
+
+    final day = now.day.toString().padLeft(2, '0');
+    final month = now.month.toString().padLeft(2, '0');
+    final year = now.year.toString();
+    final hour = now.hour.toString().padLeft(2, '0');
+    final minute = now.minute.toString().padLeft(2, '0');
+    final title = _t(
+      es: 'Evidencia grabada el dia $day/$month/$year a horas $hour:$minute',
+      en: 'Evidence recorded on $day/$month/$year at $hour:$minute',
+      ay: 'Evidencia grabata dia $day/$month/$year hora $hour:$minute',
+      qu: 'Evidencia grabada dia $day/$month/$year hora $hour:$minute',
+    );
+
+    final uploadResult = await _service.createEvidence(
+      filePath: videoPath,
+      selectedType: 'video',
+      title: title,
+      takenAt: now,
+      isPrivate: true,
+    );
+
+    if (!mounted) return;
+    setState(() => _isUploadingRecording = false);
+
+    if (!uploadResult.success || uploadResult.evidence == null) {
+      _showSnackBar(uploadResult.message);
+      return;
+    }
+
+    final newEvidence = uploadResult.evidence!;
+    setState(() {
+      _evidences = [
+        newEvidence,
+        ..._evidences.where((e) => e.id != newEvidence.id),
+      ];
+      _statusMessage = _t(
+        es: 'Video guardado como evidencia correctamente.',
+        en: 'Video saved as evidence successfully.',
+        ay: 'Video evidencia sataw imatax.',
+        qu: 'Video evidencia nispa allintam waqaychasqa.',
+      );
+      _isShowingCache = false;
+    });
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -200,6 +301,43 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                       actionIcon: Icons.add_rounded,
                       onPressed: _openCreateScreen,
                     ),
+                    const SizedBox(height: 12),
+                    if (_isRecordingEvidence)
+                      _RecordingActiveCard(
+                        onStop: _stopEvidenceRecording,
+                      )
+                    else
+                      ActionPanelCard(
+                        icon: Icons.videocam_rounded,
+                        accentColor: const Color(0xFFE26C6C),
+                        title: _t(
+                          es: 'Grabar video como evidencia',
+                          en: 'Record video as evidence',
+                          ay: 'Video evidencia sataw graba',
+                          qu: 'Video evidencia nispa graba',
+                        ),
+                        subtitle: _t(
+                          es:
+                              'Inicia la camara y graba un video. Al detener la grabacion se sube automaticamente como evidencia independiente.',
+                          en:
+                              'Start the camera and record a video. When you stop recording it is automatically uploaded as standalone evidence.',
+                          ay:
+                              'Camara qalltatam ukat video grabam. Grabacion saytayasax automatico evidencia sapaki sataw apkataniwa.',
+                          qu:
+                              'Camarataqa qallariy hinaspa video grabay. Grabacionta sayachispaykiqa automatico sapallan evidencia nispa wicharikunqa.',
+                        ),
+                        actionLabel: _t(
+                          es: 'Iniciar grabacion',
+                          en: 'Start recording',
+                          ay: 'Grabacion qallta',
+                          qu: 'Grabacion qallary',
+                        ),
+                        actionIcon: Icons.fiber_manual_record_rounded,
+                        isLoading: _isUploadingRecording,
+                        onPressed: (_isUploadingRecording)
+                            ? null
+                            : _startEvidenceRecording,
+                      ),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 16),
                       StatusBanner(
@@ -280,6 +418,102 @@ class _EvidenceLibraryScreenState extends State<EvidenceLibraryScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _RecordingActiveCard extends StatelessWidget {
+  final VoidCallback onStop;
+
+  const _RecordingActiveCard({required this.onStop});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFE26C6C).withValues(alpha: 0.22),
+            AppTheme.cardBg,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFE26C6C).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE26C6C).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.fiber_manual_record_rounded,
+                  color: Color(0xFFE26C6C),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLanguageService.instance.pick(
+                        es: 'Grabando video...',
+                        en: 'Recording video...',
+                        ay: 'Video grabataskiwa...',
+                        qu: 'Video grabakuchkan...',
+                      ),
+                      style: AppTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppLanguageService.instance.pick(
+                        es: 'Detiene la grabacion para guardarla como evidencia.',
+                        en: 'Stop the recording to save it as evidence.',
+                        ay: 'Grabacion saytam evidencia sataw imat.',
+                        qu: 'Grabacionta sayachiy evidencia nispa waqaychanankipaq.',
+                      ),
+                      style: AppTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onStop,
+              icon: const Icon(Icons.stop_rounded),
+              label: Text(
+                AppLanguageService.instance.pick(
+                  es: 'Detener y guardar',
+                  en: 'Stop and save',
+                  ay: 'Saytam ukat ima',
+                  qu: 'Sayachiy hinaspa waqaychay',
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE26C6C),
+                foregroundColor: AppTheme.textPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

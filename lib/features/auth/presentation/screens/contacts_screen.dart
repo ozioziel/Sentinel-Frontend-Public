@@ -4,6 +4,7 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../models/contact_model.dart';
 import '../services/contacts_service.dart';
 
 class ContactsScreen extends StatefulWidget {

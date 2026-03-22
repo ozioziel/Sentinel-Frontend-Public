@@ -10,6 +10,7 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/services/app_branding_service.dart';
+import '../../../auth/presentation/models/contact_model.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
 import 'emergency_capture_service.dart';
@@ -48,12 +49,7 @@ class EmergencyAlertService {
     required String ay,
     required String qu,
   }) {
-    return AppLanguageService.instance.pick(
-      es: es,
-      en: en,
-      ay: ay,
-      qu: qu,
-    );
+    return AppLanguageService.instance.pick(es: es, en: en, ay: ay, qu: qu);
   }
 
   Future<EmergencyActionResult> sendLocationAlert({
@@ -102,14 +98,10 @@ class EmergencyAlertService {
         return EmergencyActionResult(
           success: true,
           message: _t(
-            es:
-                'Se preparo un SMS de emergencia con fecha, hora y ubicacion para ${contacts.phones.length} contactos.',
-            en:
-                'An emergency SMS with date, time and location was prepared for ${contacts.phones.length} contacts.',
-            ay:
-                'Uru, hora ukat ubicacionamp emergencia SMS ukax ${contacts.phones.length} contacto ukataki wakicht\'atawa.',
-            qu:
-                'P\'unchaw, hora, ubicacionwan emergencia SMSqa ${contacts.phones.length} contactospaq wakichisqa kashan.',
+            es: 'Se preparo un SMS de emergencia con fecha, hora y ubicacion para ${contacts.phones.length} contactos.',
+            en: 'An emergency SMS with date, time and location was prepared for ${contacts.phones.length} contacts.',
+            ay: 'Uru, hora ukat ubicacionamp emergencia SMS ukax ${contacts.phones.length} contacto ukataki wakicht\'atawa.',
+            qu: 'P\'unchaw, hora, ubicacionwan emergencia SMSqa ${contacts.phones.length} contactospaq wakichisqa kashan.',
           ),
         );
       }
@@ -121,14 +113,10 @@ class EmergencyAlertService {
           return EmergencyActionResult(
             success: true,
             message: _t(
-              es:
-                  'No se pudo abrir el SMS grupal. Se preparo la alerta para compartirla con ${contacts.phones.length} contactos.',
-              en:
-                  'The group SMS could not be opened. The alert was prepared to share with ${contacts.phones.length} contacts.',
-              ay:
-                  'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta wakicht\'atawa ${contacts.phones.length} contacto ukamp apnaqañataki.',
-              qu:
-                  'SMS grupal kichariyta mana atikurqanchu. Alertaqa wakichisqa kashan ${contacts.phones.length} contactoswan rakinapaq.',
+              es: 'No se pudo abrir el SMS grupal. Se preparo la alerta para compartirla con ${contacts.phones.length} contactos.',
+              en: 'The group SMS could not be opened. The alert was prepared to share with ${contacts.phones.length} contacts.',
+              ay: 'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta wakicht\'atawa ${contacts.phones.length} contacto ukamp apnaqañataki.',
+              qu: 'SMS grupal kichariyta mana atikurqanchu. Alertaqa wakichisqa kashan ${contacts.phones.length} contactoswan rakinapaq.',
             ),
           );
         }
@@ -147,14 +135,10 @@ class EmergencyAlertService {
       return EmergencyActionResult(
         success: true,
         message: _t(
-          es:
-              'No se pudo abrir el SMS grupal. La alerta quedo guardada y se intentara nuevamente para ${contacts.recipientLabel}.',
-          en:
-              'The group SMS could not be opened. The alert was saved and will be retried for ${contacts.recipientLabel}.',
-          ay:
-              'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta imatawa ukat ${contacts.recipientLabel} ukataki mayamp yant\'ataniwa.',
-          qu:
-              'SMS grupal kichariyta mana atikurqanchu. Alertaqa waqaychasqa kashan hinaspa ${contacts.recipientLabel}paq yapamanta yachasqa kanqa.',
+          es: 'No se pudo abrir el SMS grupal. La alerta quedo guardada y se intentara nuevamente para ${contacts.recipientLabel}.',
+          en: 'The group SMS could not be opened. The alert was saved and will be retried for ${contacts.recipientLabel}.',
+          ay: 'Taqi contactoanakar SMS apayañax janiw jist\'arañjamakiti. Alerta imatawa ukat ${contacts.recipientLabel} ukataki mayamp yant\'ataniwa.',
+          qu: 'SMS grupal kichariyta mana atikurqanchu. Alertaqa waqaychasqa kashan hinaspa ${contacts.recipientLabel}paq yapamanta yachasqa kanqa.',
         ),
       );
     }
@@ -176,21 +160,18 @@ class EmergencyAlertService {
               )
             : _t(
                 es: ' para compartirla con ${contacts.phones.length} contactos.',
-                en:
-                    ' to share it with ${contacts.phones.length} contacts.',
-                ay:
-                    ' ${contacts.phones.length} contactompi apnaqañataki.',
-                qu:
-                    ' ${contacts.phones.length} contactoswan rakinapaq.',
+                en: ' to share it with ${contacts.phones.length} contacts.',
+                ay: ' ${contacts.phones.length} contactompi apnaqañataki.',
+                qu: ' ${contacts.phones.length} contactoswan rakinapaq.',
               );
         return EmergencyActionResult(
           success: true,
-          message: _t(
+          message:
+              _t(
                 es: 'Se preparo la alerta con fecha, hora y ubicacion',
                 en: 'The alert was prepared with date, time and location',
                 ay: 'Uru, hora ukat ubicacionamp alerta wakicht\'atawa',
-                qu:
-                    'P\'unchaw, hora, ubicacionwan alerta wakichisqa kashan',
+                qu: 'P\'unchaw, hora, ubicacionwan alerta wakichisqa kashan',
               ) +
               suffix,
         );
@@ -232,12 +213,7 @@ class EmergencyAlertService {
       return EmergencyActionResult(
         success: true,
         message:
-            '$prefix ${_t(
-              es: 'se preparo un SMS de emergencia',
-              en: 'an emergency SMS was prepared',
-              ay: 'maya emergencia SMS wakicht\'atawa',
-              qu: 'huk emergencia SMS wakichisqa kashan',
-            )}$suffix',
+            '$prefix ${_t(es: 'se preparo un SMS de emergencia', en: 'an emergency SMS was prepared', ay: 'maya emergencia SMS wakicht\'atawa', qu: 'huk emergencia SMS wakichisqa kashan')}$suffix',
       );
     }
 
@@ -253,14 +229,10 @@ class EmergencyAlertService {
     return EmergencyActionResult(
       success: true,
       message: _t(
-        es:
-            'No habia internet ni SMS disponible. La alerta quedo guardada y se intentara abrir WhatsApp para ${contacts.primaryContactName} cuando vuelva la conexion.',
-        en:
-            'There was no internet or SMS available. The alert was saved and WhatsApp will be retried for ${contacts.primaryContactName} when the connection returns.',
-        ay:
-            'Janiw internet ni SMS utjkataynati. Alerta imatawa ukat conexion kutt\'anxasax ${contacts.primaryContactName} ukatak WhatsApp jist\'arañ yant\'ataniwa.',
-        qu:
-            'Mana internet nitaq SMS karqanchu. Alerta waqaychasqa kashan, hinaspa conexion kutimuptin ${contacts.primaryContactName}paq WhatsApp kichariyta yapamanta yachasqa kanqa.',
+        es: 'No habia internet ni SMS disponible. La alerta quedo guardada y se intentara abrir WhatsApp para ${contacts.primaryContactName} cuando vuelva la conexion.',
+        en: 'There was no internet or SMS available. The alert was saved and WhatsApp will be retried for ${contacts.primaryContactName} when the connection returns.',
+        ay: 'Janiw internet ni SMS utjkataynati. Alerta imatawa ukat conexion kutt\'anxasax ${contacts.primaryContactName} ukatak WhatsApp jist\'arañ yant\'ataniwa.',
+        qu: 'Mana internet nitaq SMS karqanchu. Alerta waqaychasqa kashan, hinaspa conexion kutimuptin ${contacts.primaryContactName}paq WhatsApp kichariyta yapamanta yachasqa kanqa.',
       ),
     );
   }
@@ -294,14 +266,10 @@ class EmergencyAlertService {
     return EmergencyActionResult(
       success: true,
       message: _t(
-        es:
-            'Se reanudo la alerta pendiente por WhatsApp para ${pendingAlert.contactName}.',
-        en:
-            'The pending WhatsApp alert for ${pendingAlert.contactName} resumed.',
-        ay:
-            '${pendingAlert.contactName} ukatak WhatsApp suyt\'ata alertax mayamp qalltatawa.',
-        qu:
-            '${pendingAlert.contactName}paq suyasqa WhatsApp alerta yapamanta qallarirqan.',
+        es: 'Se reanudo la alerta pendiente por WhatsApp para ${pendingAlert.contactName}.',
+        en: 'The pending WhatsApp alert for ${pendingAlert.contactName} resumed.',
+        ay: '${pendingAlert.contactName} ukatak WhatsApp suyt\'ata alertax mayamp qalltatawa.',
+        qu: '${pendingAlert.contactName}paq suyasqa WhatsApp alerta yapamanta qallarirqan.',
       ),
     );
   }
@@ -328,10 +296,8 @@ class EmergencyAlertService {
       message: _t(
         es: 'Se reanudo la alerta pendiente para ${pendingAlert.recipientLabel}.',
         en: 'The pending alert for ${pendingAlert.recipientLabel} resumed.',
-        ay:
-            '${pendingAlert.recipientLabel} ukatak suyt\'ata alertax mayamp qalltatawa.',
-        qu:
-            '${pendingAlert.recipientLabel}paq suyasqa alerta yapamanta qallarirqan.',
+        ay: '${pendingAlert.recipientLabel} ukatak suyt\'ata alertax mayamp qalltatawa.',
+        qu: '${pendingAlert.recipientLabel}paq suyasqa alerta yapamanta qallarirqan.',
       ),
     );
   }
@@ -346,14 +312,10 @@ class EmergencyAlertService {
       return EmergencyActionResult(
         success: false,
         message: _t(
-          es:
-              'La alerta se detuvo, pero no se genero audio o video para enviar.',
-          en:
-              'The alert stopped, but no audio or video was generated to send.',
-          ay:
-              'Alertax sayt\'atawa, ukampis janiw audio ni video apayañatak luraskiti.',
-          qu:
-              'Alertaqa sayarqan, ichaqa mana audio nitaq video apachanapaq ruwasqachu.',
+          es: 'La alerta se detuvo, pero no se genero audio o video para enviar.',
+          en: 'The alert stopped, but no audio or video was generated to send.',
+          ay: 'Alertax sayt\'atawa, ukampis janiw audio ni video apayañatak luraskiti.',
+          qu: 'Alertaqa sayarqan, ichaqa mana audio nitaq video apachanapaq ruwasqachu.',
         ),
       );
     }
@@ -383,8 +345,7 @@ class EmergencyAlertService {
           es: 'No se encontro un archivo compatible para compartir la evidencia.',
           en: 'No compatible file was found to share the evidence.',
           ay: 'Janiw evidencia apnaqañatakix compatible archivo jikxataskiti.',
-          qu:
-              'Evidenciata rakinapaq alli archivoqa mana tarikurqanchu.',
+          qu: 'Evidenciata rakinapaq alli archivoqa mana tarikurqanchu.',
         ),
       );
     }
@@ -420,20 +381,14 @@ class EmergencyAlertService {
               ? _t(
                   es: 'No se pudo abrir el menu para compartir la evidencia.',
                   en: 'The share menu could not be opened for the evidence.',
-                  ay:
-                      'Janiw evidencia apnaqañatakix menu jist\'arañjamakiti.',
-                  qu:
-                      'Evidenciata rakinapaq menuqa mana kichariyta atikurqanchu.',
+                  ay: 'Janiw evidencia apnaqañatakix menu jist\'arañjamakiti.',
+                  qu: 'Evidenciata rakinapaq menuqa mana kichariyta atikurqanchu.',
                 )
               : _t(
-                  es:
-                      'No se pudo abrir el correo ni el menu para compartir la evidencia.',
-                  en:
-                      'Neither email nor the share menu could be opened for the evidence.',
-                  ay:
-                      'Janiw correo ni evidencia apnaqañatak menu jist\'arañjamakiti.',
-                  qu:
-                      'Correo nisqapas ni evidenciata rakinapaq menu nisqapas mana kichariyta atikurqanchu.',
+                  es: 'No se pudo abrir el correo ni el menu para compartir la evidencia.',
+                  en: 'Neither email nor the share menu could be opened for the evidence.',
+                  ay: 'Janiw correo ni evidencia apnaqañatak menu jist\'arañjamakiti.',
+                  qu: 'Correo nisqapas ni evidenciata rakinapaq menu nisqapas mana kichariyta atikurqanchu.',
                 ),
         );
       }
@@ -449,14 +404,10 @@ class EmergencyAlertService {
                   qu: 'Evidencia apachiyqa sayachisqa karqan.',
                 )
               : _t(
-                  es:
-                      'No se pudo abrir el correo y se cancelo el envio de la evidencia.',
-                  en:
-                      'Email could not be opened and the evidence delivery was canceled.',
-                  ay:
-                      'Janiw correo jist\'arañjamakiti ukat evidencia apayañax sayt\'ayatawa.',
-                  qu:
-                      'Correoqa mana kichariyta atikurqanchu, hinaspa evidencia apachiyqa sayachisqa karqan.',
+                  es: 'No se pudo abrir el correo y se cancelo el envio de la evidencia.',
+                  en: 'Email could not be opened and the evidence delivery was canceled.',
+                  ay: 'Janiw correo jist\'arañjamakiti ukat evidencia apayañax sayt\'ayatawa.',
+                  qu: 'Correoqa mana kichariyta atikurqanchu, hinaspa evidencia apachiyqa sayachisqa karqan.',
                 ),
         );
       }
@@ -481,14 +432,10 @@ class EmergencyAlertService {
                 qu: 'Evidenciata rakinapaq mana wakichiyta atikurqanchu.',
               )
             : _t(
-                es:
-                    'No se pudo preparar la evidencia para correo ni para compartirla.',
-                en:
-                    'The evidence could not be prepared for email or sharing.',
-                ay:
-                    'Janiw evidenciax correo ni apnaqañatakis wakicht\'añjamakiti.',
-                qu:
-                    'Evidenciaqa correo ni rakinapaqpas mana wakichiyta atikurqanchu.',
+                es: 'No se pudo preparar la evidencia para correo ni para compartirla.',
+                en: 'The evidence could not be prepared for email or sharing.',
+                ay: 'Janiw evidenciax correo ni apnaqañatakis wakicht\'añjamakiti.',
+                qu: 'Evidenciaqa correo ni rakinapaqpas mana wakichiyta atikurqanchu.',
               ),
       );
     }
@@ -525,8 +472,7 @@ class EmergencyAlertService {
             es: 'No se pudo iniciar la llamada a ${contact.name}.',
             en: 'The call to ${contact.name} could not be started.',
             ay: 'Janiw ${contact.name} ukar jawst\'aw qalltayañjamakiti.',
-            qu:
-                '${contact.name}man waqyayninta mana qallariyta atikurqanchu.',
+            qu: '${contact.name}man waqyayninta mana qallariyta atikurqanchu.',
           ),
         );
       }
@@ -539,8 +485,7 @@ class EmergencyAlertService {
           es: 'Ocurrio un error al intentar llamar a ${contact.name}.',
           en: 'An error happened while trying to call ${contact.name}.',
           ay: '${contact.name} ukar jawst\'añ yant\'kasax pantjasiw utji.',
-          qu:
-              '${contact.name}man waqyayninta yachaspaymi pantay karqan.',
+          qu: '${contact.name}man waqyayninta yachaspaymi pantay karqan.',
         ),
       );
     }
@@ -606,12 +551,7 @@ class EmergencyAlertService {
   }) {
     final appName = AppBrandingService.instance.displayName;
     final lines = <String>[
-      _t(
-        es: 'ALERTA SOS',
-        en: 'SOS ALERT',
-        ay: 'SOS ALERTA',
-        qu: 'SOS ALERTA',
-      ),
+      _t(es: 'ALERTA SOS', en: 'SOS ALERT', ay: 'SOS ALERTA', qu: 'SOS ALERTA'),
       _t(
         es: 'Necesito ayuda ahora.',
         en: 'I need help right now.',
@@ -665,12 +605,7 @@ class EmergencyAlertService {
         locationUrl,
         alertTriggeredAt: alertTriggeredAt,
       );
-      return '$baseMessage ${_t(
-        es: 'Se prepararon el video SOS y el audio de respaldo.',
-        en: 'The SOS video and backup audio were prepared.',
-        ay: 'SOS video ukat yanapt\'iri audio wakicht\'atawa.',
-        qu: 'SOS videowan yanapakuq audiowan wakichisqa karqan.',
-      )}';
+      return '$baseMessage ${_t(es: 'Se prepararon el video SOS y el audio de respaldo.', en: 'The SOS video and backup audio were prepared.', ay: 'SOS video ukat yanapt\'iri audio wakicht\'atawa.', qu: 'SOS videowan yanapakuq audiowan wakichisqa karqan.')}';
     }
 
     if (hasVideo) {
@@ -678,12 +613,7 @@ class EmergencyAlertService {
         locationUrl,
         alertTriggeredAt: alertTriggeredAt,
       );
-      return '$baseMessage ${_t(
-        es: 'Se preparo el video SOS.',
-        en: 'The SOS video was prepared.',
-        ay: 'SOS videox wakicht\'atawa.',
-        qu: 'SOS videoqa wakichisqa karqan.',
-      )}';
+      return '$baseMessage ${_t(es: 'Se preparo el video SOS.', en: 'The SOS video was prepared.', ay: 'SOS videox wakicht\'atawa.', qu: 'SOS videoqa wakichisqa karqan.')}';
     }
 
     if (hasAudio) {
@@ -691,12 +621,7 @@ class EmergencyAlertService {
         locationUrl,
         alertTriggeredAt: alertTriggeredAt,
       );
-      return '$baseMessage ${_t(
-        es: 'Se preparo el audio SOS.',
-        en: 'The SOS audio was prepared.',
-        ay: 'SOS audiox wakicht\'atawa.',
-        qu: 'SOS audioqa wakichisqa karqan.',
-      )}';
+      return '$baseMessage ${_t(es: 'Se preparo el audio SOS.', en: 'The SOS audio was prepared.', ay: 'SOS audiox wakicht\'atawa.', qu: 'SOS audioqa wakichisqa karqan.')}';
     }
 
     return _t(
@@ -720,10 +645,7 @@ class EmergencyAlertService {
         stopResult.attachmentPaths.contains(stopResult.audioPath);
 
     final lines = <String>[
-      _buildEmergencyMessage(
-        locationUrl,
-        alertTriggeredAt: alertTriggeredAt,
-      ),
+      _buildEmergencyMessage(locationUrl, alertTriggeredAt: alertTriggeredAt),
       '',
       _t(
         es: 'Se adjuntan las evidencias registradas durante la alerta SOS.',
@@ -769,12 +691,7 @@ class EmergencyAlertService {
       alertTriggeredAt: alertTriggeredAt,
       locationUrl: locationUrl,
     );
-    return '$baseMessage ${_t(
-      es: 'Se preparo un correo para ${_describeRecipients(recipients)}.',
-      en: 'An email was prepared for ${_describeRecipients(recipients)}.',
-      ay: '${_describeRecipients(recipients)} ukatak correo wakicht\'atawa.',
-      qu: '${_describeRecipients(recipients)}paq correo wakichisqa kashan.',
-    )}';
+    return '$baseMessage ${_t(es: 'Se preparo un correo para ${_describeRecipients(recipients)}.', en: 'An email was prepared for ${_describeRecipients(recipients)}.', ay: '${_describeRecipients(recipients)} ukatak correo wakicht\'atawa.', qu: '${_describeRecipients(recipients)}paq correo wakichisqa kashan.')}';
   }
 
   String _buildFallbackShareMessage({
@@ -789,24 +706,10 @@ class EmergencyAlertService {
       locationUrl: locationUrl,
     );
     if (hadEmailRecipients) {
-      return '$baseMessage ${_t(
-        es:
-            'No se pudo abrir el correo, pero se abrio el menu para compartir la evidencia.',
-        en:
-            'Email could not be opened, but the share menu for the evidence was opened.',
-        ay:
-            'Janiw correo jist\'arañjamakiti, ukampis evidencia apnaqañatakix menu jist\'aratawa.',
-        qu:
-            'Correoqa mana kichariyta atikurqanchu, ichaqa evidenciata rakinapaq menuqa kicharisqa karqan.',
-      )}';
+      return '$baseMessage ${_t(es: 'No se pudo abrir el correo, pero se abrio el menu para compartir la evidencia.', en: 'Email could not be opened, but the share menu for the evidence was opened.', ay: 'Janiw correo jist\'arañjamakiti, ukampis evidencia apnaqañatakix menu jist\'aratawa.', qu: 'Correoqa mana kichariyta atikurqanchu, ichaqa evidenciata rakinapaq menuqa kicharisqa karqan.')}';
     }
 
-    return '$baseMessage ${_t(
-      es: 'Se abrio el menu para compartir la evidencia.',
-      en: 'The share menu for the evidence was opened.',
-      ay: 'Evidencia apnaqañatakix menu jist\'aratawa.',
-      qu: 'Evidenciata rakinapaq menuqa kicharisqa karqan.',
-    )}';
+    return '$baseMessage ${_t(es: 'Se abrio el menu para compartir la evidencia.', en: 'The share menu for the evidence was opened.', ay: 'Evidencia apnaqañatakix menu jist\'aratawa.', qu: 'Evidenciata rakinapaq menuqa kicharisqa karqan.')}';
   }
 
   Future<EmergencyActionResult> _prepareEvidenceEmail({
@@ -819,12 +722,7 @@ class EmergencyAlertService {
     final email = Email(
       recipients: recipients,
       subject:
-          '${_t(
-            es: 'Evidencia de emergencia SOS',
-            en: 'SOS emergency evidence',
-            ay: 'SOS emergencia evidencia',
-            qu: 'SOS emergencia evidencia',
-          )} - ${_formatAlertTimestampForSubject(alertTriggeredAt)}',
+          '${_t(es: 'Evidencia de emergencia SOS', en: 'SOS emergency evidence', ay: 'SOS emergencia evidencia', qu: 'SOS emergencia evidencia')} - ${_formatAlertTimestampForSubject(alertTriggeredAt)}',
       body: _buildEvidenceEmailBody(
         stopResult: stopResult,
         alertTriggeredAt: alertTriggeredAt,
@@ -1075,10 +973,7 @@ class EmergencyAlertService {
       return false;
     }
 
-    return _openWhatsAppMessage(
-      phone: phone,
-      message: pendingAlert.message,
-    );
+    return _openWhatsAppMessage(phone: phone, message: pendingAlert.message);
   }
 
   Future<void> _savePendingAlert(_PendingAlert alert) async {
@@ -1218,8 +1113,7 @@ class EmergencyAlertService {
         continue;
       }
 
-      if (normalizedPath.endsWith('.m4a') ||
-          normalizedPath.endsWith('.aac')) {
+      if (normalizedPath.endsWith('.m4a') || normalizedPath.endsWith('.aac')) {
         files.add(XFile(path, mimeType: 'audio/mp4'));
       }
     }
