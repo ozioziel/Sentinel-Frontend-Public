@@ -26,12 +26,12 @@ class AppTheme {
   static const Color error = Color(0xFFFF5E7F);
   static const Color divider = Color(0xFF593041);
 
-  // Light theme colors
-  static const Color lightSurface = Color(0xFFF5EFE8);        // Beige claro
-  static const Color lightCardBg = Color(0xFFFBF8F4);         // Beige muy suave
-  static const Color lightTextPrimary = Color(0xFF3D2B28);    // Marrón oscuro
-  static const Color lightTextSecondary = Color(0xFF8B6F66);  // Marrón gris
-  static const Color lightDivider = Color(0xFFE8D5D0);        // Beige pálido
+  // Light theme colors (mismo esquema oscuro espresso)
+  static const Color lightSurface = espressoDeep;
+  static const Color lightCardBg = espresso;
+  static const Color lightTextPrimary = textPrimary;
+  static const Color lightTextSecondary = textSecondary;
+  static const Color lightDivider = divider;
 
   static const LinearGradient berryBackdropGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -404,7 +404,10 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: lightDivider.withValues(alpha: 0.72), width: 1),
+          side: BorderSide(
+            color: lightDivider.withValues(alpha: 0.72),
+            width: 1,
+          ),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
       ),
@@ -543,10 +546,7 @@ class AppTheme {
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
-          return const IconThemeData(
-            color: primary,
-            size: 22,
-          );
+          return const IconThemeData(color: primary, size: 22);
         }),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

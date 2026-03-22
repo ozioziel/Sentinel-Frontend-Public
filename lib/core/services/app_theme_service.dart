@@ -25,7 +25,9 @@ class AppThemeService extends ChangeNotifier {
       final savedTheme = prefs.getString(AppConstants.keyAppTheme);
 
       if (savedTheme != null) {
-        _currentTheme = savedTheme == 'light' ? AppThemeMode.light : AppThemeMode.dark;
+        _currentTheme = savedTheme == 'light'
+            ? AppThemeMode.light
+            : AppThemeMode.dark;
       }
 
       notifyListeners();

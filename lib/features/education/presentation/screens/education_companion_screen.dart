@@ -4,7 +4,6 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/education_pet_state.dart';
 import '../services/education_pet_service.dart';
-import '../widgets/education_games_cta_card.dart';
 import '../widgets/education_pet_card.dart';
 import 'education_games_screen.dart';
 
@@ -22,7 +21,6 @@ class _EducationCompanionScreenState extends State<EducationCompanionScreen> {
   EducationPetState _petState = EducationPetState.initial();
   bool _isLoadingPet = true;
   bool _isFeedingPet = false;
-  bool _isPlayingWithPet = false;
 
   @override
   void initState() {
@@ -93,50 +91,13 @@ class _EducationCompanionScreenState extends State<EducationCompanionScreen> {
   }
 
   Future<void> _playWithPet() async {
-    if (_isPlayingWithPet || _isLoadingPet) {
-      return;
-    }
+    if (_isLoadingPet) return;
 
-    setState(() => _isPlayingWithPet = true);
-
-    // Pequeña animación de juego con la mascota
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Tu mascota está feliz! 🎉'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-
-    setState(() => _isPlayingWithPet = false);
-  }
-
-  Future<void> _cleanPet() async {
-    if (_isLoadingPet) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Tu mascota ahora está limpia y reluciente! ✨'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  Future<void> _openGames() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const EducationGamesScreen()),
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     await _loadPetState();
   }
@@ -159,10 +120,7 @@ class _EducationCompanionScreenState extends State<EducationCompanionScreen> {
               isFeeding: _isFeedingPet,
               onFeed: _feedPet,
               onPlay: _playWithPet,
-              onClean: _cleanPet,
             ),
-            const SizedBox(height: 12),
-            EducationGamesCtaCard(onTap: _openGames),
           ],
         ),
       ),

@@ -217,7 +217,7 @@
   },
   "chatbot": {
     "title": "Chatbot de apoyo",
-    "intro": "Hola, soy tu companera virtual. Estoy aqui para escucharte y orientarte paso a paso.",
+    "intro": "Hola. Estoy aqui para escucharte y orientarte paso a paso.",
     "hint": "Escribe tu mensaje...",
     "support_pet_note": "Tu mascota virtual te acompana aqui",
     "quick": {

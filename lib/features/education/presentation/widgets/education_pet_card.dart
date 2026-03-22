@@ -12,7 +12,6 @@ class EducationPetCard extends StatefulWidget {
   final bool isFeeding;
   final VoidCallback onFeed;
   final VoidCallback? onPlay;
-  final VoidCallback? onClean;
 
   const EducationPetCard({
     super.key,
@@ -21,7 +20,6 @@ class EducationPetCard extends StatefulWidget {
     required this.isFeeding,
     required this.onFeed,
     this.onPlay,
-    this.onClean,
   });
 
   @override
@@ -111,7 +109,7 @@ class _EducationPetCardState extends State<EducationPetCard>
                 child: Text(
                   widget.petState.moodLabel,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppTheme.espressoDeep,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -155,7 +153,7 @@ class _EducationPetCardState extends State<EducationPetCard>
                       child: const Icon(
                         Icons.favorite_rounded,
                         size: 16,
-                        color: Colors.white,
+                        color: AppTheme.espressoDeep,
                       ),
                     ),
                   ),
@@ -260,16 +258,6 @@ class _EducationPetCardState extends State<EducationPetCard>
                     label: 'Jugar',
                     onPressed: isBusy ? null : widget.onPlay!,
                     color: Colors.blue,
-                  ),
-                ),
-              const SizedBox(width: 10),
-              if (widget.onClean != null)
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.cleaning_services_rounded,
-                    label: 'Limpiar',
-                    onPressed: isBusy ? null : widget.onClean!,
-                    color: Colors.purple,
                   ),
                 ),
             ],

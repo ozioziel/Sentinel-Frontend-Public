@@ -1163,7 +1163,7 @@ class _EmergencyQuickActionCard extends StatelessWidget {
                       width: 132,
                       height: 132,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
+                        color: AppTheme.peonySoft.withValues(alpha: 0.10),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1216,7 +1216,7 @@ class _EmergencyQuickActionCard extends StatelessWidget {
                                     style: AppTheme.headlineMedium.copyWith(
                                       fontSize: subtitle == null ? 24 : 22,
                                       height: 0.98,
-                                      color: Colors.white,
+                                      color: AppTheme.textPrimary,
                                       shadows: const [
                                         Shadow(
                                           color: Color(0x66000000),
@@ -1235,7 +1235,7 @@ class _EmergencyQuickActionCard extends StatelessWidget {
                                       style: AppTheme.bodyMedium.copyWith(
                                         fontSize: 12,
                                         height: 1.28,
-                                        color: Colors.white.withValues(
+                                        color: AppTheme.textPrimary.withValues(
                                           alpha: 0.82,
                                         ),
                                       ),
@@ -1260,7 +1260,7 @@ class _EmergencyQuickActionCard extends StatelessWidget {
                           width: 78,
                           height: 78,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.96),
+                            color: AppTheme.peonySoft,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -1319,18 +1319,18 @@ class _MapShareTag extends StatelessWidget {
           alpha: compact ? 0.74 : 0.62,
         ),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+        border: Border.all(color: AppTheme.peonySoft.withValues(alpha: 0.40)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: compact ? 15 : 16, color: Colors.white),
+          Icon(icon, size: compact ? 15 : 16, color: AppTheme.textPrimary),
           const SizedBox(width: 6),
           Text(
             label,
             style: AppTheme.labelLarge.copyWith(
               fontSize: compact ? 10.5 : 11.5,
-              color: Colors.white,
+              color: AppTheme.textPrimary,
               letterSpacing: compact ? 0.65 : 0.8,
             ),
           ),

@@ -412,10 +412,7 @@ class _ThemeToggleCard extends StatelessWidget {
   final AppThemeMode currentTheme;
   final ValueChanged<AppThemeMode> onChanged;
 
-  const _ThemeToggleCard({
-    required this.currentTheme,
-    required this.onChanged,
-  });
+  const _ThemeToggleCard({required this.currentTheme, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -429,7 +426,10 @@ class _ThemeToggleCard extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () => onChanged(AppThemeMode.light),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: currentTheme == AppThemeMode.light
                           ? AppTheme.primary.withValues(alpha: 0.18)
@@ -461,7 +461,10 @@ class _ThemeToggleCard extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () => onChanged(AppThemeMode.dark),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: currentTheme == AppThemeMode.dark
                           ? AppTheme.primary.withValues(alpha: 0.18)
