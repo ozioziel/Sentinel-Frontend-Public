@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_language_service.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/services/app_branding_service.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
@@ -28,14 +30,17 @@ class EmergencyAlertService {
   final AuthService _authService;
   final ContactsService _contactsService;
   final Connectivity _connectivity;
+  final ApiClient _apiClient;
 
   EmergencyAlertService({
     AuthService? authService,
     ContactsService? contactsService,
     Connectivity? connectivity,
+    ApiClient? apiClient,
   }) : _authService = authService ?? AuthService(),
        _contactsService = contactsService ?? ContactsService(),
-       _connectivity = connectivity ?? Connectivity();
+       _connectivity = connectivity ?? Connectivity(),
+       _apiClient = apiClient ?? ApiClient();
 
   String _t({
     required String es,
@@ -848,6 +853,106 @@ class EmergencyAlertService {
           en: 'An email app could not be opened.',
           ay: 'Janiw correo app jist\'arañjamakiti.',
           qu: 'Correo appqa mana kichariyta atikurqanchu.',
+        ),
+      );
+    }
+  }
+
+  Future<EmergencyActionResult> sendEvidenceEmailViaBackend({
+    required List<String> evidenceIds,
+    required DateTime alertTriggeredAt,
+    String? locationUrl,
+    bool hasVideo = false,
+    bool hasAudio = false,
+  }) async {
+    final user = await _authService.getSession();
+    if (user == null) {
+      return EmergencyActionResult(
+        success: false,
+        message: _t(
+          es: 'No hay una sesion activa para enviar el correo.',
+          en: 'There is no active session to send the email.',
+          ay: 'Janiw correo apayañatakix sesion activa utjkiti.',
+          qu: 'Correo apachanapaq sesion activaqa mana kanchu.',
+        ),
+      );
+    }
+
+    final contacts = await _loadEmergencyContacts();
+    final emailRecipients = contacts?.emails ?? const <String>[];
+
+    if (emailRecipients.isEmpty) {
+      return EmergencyActionResult(
+        success: false,
+        message: _t(
+          es: 'No hay contactos de emergencia con correo configurado.',
+          en: 'No emergency contacts have an email configured.',
+          ay: 'Janiw correo wakicht\'ata emergencia contactonakamax utjkiti.',
+          qu: 'Correo wakichisqayuq emergencia contactosniyki mana kanchu.',
+        ),
+      );
+    }
+
+    try {
+      await _apiClient.postJson(
+        '/emergency/send-email',
+        accessToken: user.accessToken,
+        body: {
+          'recipients': emailRecipients,
+          'subject':
+              '${_t(
+                es: 'Evidencia de emergencia SOS',
+                en: 'SOS emergency evidence',
+                ay: 'SOS emergencia evidencia',
+                qu: 'SOS emergencia evidencia',
+              )} - ${_formatAlertTimestampForSubject(alertTriggeredAt)}',
+          'body': {
+            'alert_message': _buildEmergencyMessage(
+              locationUrl,
+              alertTriggeredAt: alertTriggeredAt,
+            ),
+            'location_url': locationUrl,
+            'alert_triggered_at': alertTriggeredAt.toIso8601String(),
+            'has_video': hasVideo,
+            'has_audio': hasAudio,
+          },
+          'evidence_ids': evidenceIds,
+        },
+      );
+
+      return EmergencyActionResult(
+        success: true,
+        message: _t(
+          es:
+              'Se envio el correo de emergencia a ${_describeRecipients(emailRecipients)}.',
+          en:
+              'The emergency email was sent to ${_describeRecipients(emailRecipients)}.',
+          ay:
+              '${_describeRecipients(emailRecipients)} ukatak emergencia correo apayatawa.',
+          qu:
+              '${_describeRecipients(emailRecipients)}paq emergencia correoqa apachisqa karqan.',
+        ),
+      );
+    } on ApiException catch (e) {
+      debugPrint('[EmergencyAlertService] Email via backend failed: ${e.message} (status: ${e.statusCode})');
+      return EmergencyActionResult(
+        success: false,
+        message: '${_t(
+          es: 'No se pudo enviar el correo de emergencia.',
+          en: 'The emergency email could not be sent.',
+          ay: 'Janiw emergencia correo apayañjamakiti.',
+          qu: 'Emergencia correoqa mana apachikurqanchu.',
+        )} ${e.message}',
+      );
+    } catch (e) {
+      debugPrint('[EmergencyAlertService] Email via backend unexpected error: $e');
+      return EmergencyActionResult(
+        success: false,
+        message: _t(
+          es: 'No se pudo conectar con el servidor para enviar el correo.',
+          en: 'Could not connect to the server to send the email.',
+          ay: 'Janiw correo apayañatakix servidorampi mayachasiyjamakiti.',
+          qu: 'Correo apachanapaq servidorwan mana tinkanakuyta atikurqanchu.',
         ),
       );
     }

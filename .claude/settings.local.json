@@ -4,7 +4,10 @@
       "Bash(while read:*)",
       "Bash(do if:*)",
       "Bash(then echo:*)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Read(//c/Users/HP/flutter/bin/**)",
+      "Read(//c/src/flutter/bin/**)",
+      "Read(//c/Users/HP/**)"
     ]
   }
 }

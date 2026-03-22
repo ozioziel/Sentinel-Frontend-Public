@@ -125,31 +125,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         _showSnackBar(issue);
       }
 
-      setState(() {
-        _processingStatus = AppLanguageService.instance.tr(
-          'emergency.processing_prepare_email',
-          fallback: 'Preparando evidencia para correo o compartir...',
-        );
-      });
-
-      final shareResult = await _alertService.shareEvidence(
-        stopResult: stopResult,
-        locationUrl: locationUrl,
-        alertTriggeredAt: previousAlertTriggeredAt,
-      );
-
-      if (mounted && shareResult.message != null) {
-        _showSnackBar(shareResult.message!);
-      }
-
       final hasEvidence = stopResult.attachmentPaths.isNotEmpty;
-      if (hasEvidence) {
-        setState(() {
-          _processingStatus = AppLanguageService.instance.tr(
-            'emergency.processing_upload',
-          );
-        });
-      }
 
       final incidentId = await _resolveIncidentId(
         locationUrl: locationUrl,
@@ -157,15 +133,46 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         alertTriggeredAt: previousAlertTriggeredAt,
       );
 
+      List<String> uploadedEvidenceIds = [];
+
       if (hasEvidence) {
+        setState(() {
+          _processingStatus = AppLanguageService.instance.tr(
+            'emergency.processing_upload',
+          );
+        });
+
         final uploadResult = await _backendService.uploadEvidence(
           incidentId: incidentId,
           stopResult: stopResult,
           locationUrl: locationUrl,
         );
 
+        uploadedEvidenceIds = uploadResult.evidenceIds;
+
         if (mounted && uploadResult.message != null) {
           _showSnackBar(uploadResult.message!);
+        }
+      }
+
+      if (uploadedEvidenceIds.isNotEmpty) {
+        setState(() {
+          _processingStatus = AppLanguageService.instance.tr(
+            'emergency.processing_prepare_email',
+            fallback: 'Enviando correo de emergencia...',
+          );
+        });
+
+        final emailResult = await _alertService.sendEvidenceEmailViaBackend(
+          evidenceIds: uploadedEvidenceIds,
+          alertTriggeredAt: previousAlertTriggeredAt ?? DateTime.now(),
+          locationUrl: locationUrl,
+          hasVideo: stopResult.videoPath != null,
+          hasAudio: stopResult.audioPath != null,
+        );
+
+        if (mounted && emailResult.message != null) {
+          _showSnackBar(emailResult.message!);
         }
       }
     } finally {
@@ -579,96 +586,96 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
-                  if (_isRecording || _isProcessingEvidence) ...[
-                    AppFloatingSurface(
-                      padding: const EdgeInsets.all(14),
-                      borderRadius: 20,
-                      amplitude: 2.6,
-                      phase: math.pi / 2,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          (_isProcessingEvidence
-                                  ? AppTheme.warning
-                                  : AppTheme.error)
-                              .withValues(alpha: 0.22),
-                          AppTheme.cardBg.withValues(alpha: 0.90),
-                        ],
-                      ),
-                      borderColor:
-                          (_isProcessingEvidence
-                                  ? AppTheme.warning
-                                  : AppTheme.error)
-                              .withValues(alpha: 0.55),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isProcessingEvidence
-                                ? Icons.hourglass_top
-                                : Icons.mic,
-                            color: _isProcessingEvidence
-                                ? AppTheme.warning
-                                : AppTheme.error,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _isProcessingEvidence
-                                      ? (_processingStatus ??
-                                            context.tr(
-                                              'emergency.processing_default',
-                                            ))
-                                      : _captureStatus,
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    color: AppTheme.textPrimary.withValues(
-                                      alpha: 0.88,
-                                    ),
-                                  ),
-                                ),
-                                if (incidentProgressNote != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    incidentProgressNote,
-                                    style: AppTheme.bodyMedium.copyWith(
-                                      fontSize: 12,
-                                      color: AppTheme.textPrimary.withValues(
-                                        alpha: 0.72,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (_isProcessingEvidence)
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.warning,
-                              ),
-                            )
-                          else
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppTheme.error,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                  // if (_isRecording || _isProcessingEvidence) ...[
+                  //   AppFloatingSurface(
+                  //     padding: const EdgeInsets.all(14),
+                  //     borderRadius: 20,
+                  //     amplitude: 2.6,
+                  //     phase: math.pi / 2,
+                  //     gradient: LinearGradient(
+                  //       begin: Alignment.topLeft,
+                  //       end: Alignment.bottomRight,
+                  //       colors: [
+                  //         (_isProcessingEvidence
+                  //                 ? AppTheme.warning
+                  //                 : AppTheme.error)
+                  //             .withValues(alpha: 0.22),
+                  //         AppTheme.cardBg.withValues(alpha: 0.90),
+                  //       ],
+                  //     ),
+                  //     borderColor:
+                  //         (_isProcessingEvidence
+                  //                 ? AppTheme.warning
+                  //                 : AppTheme.error)
+                  //             .withValues(alpha: 0.55),
+                  //     child: Row(
+                  //       children: [
+                  //         Icon(
+                  //           _isProcessingEvidence
+                  //               ? Icons.hourglass_top
+                  //               : Icons.mic,
+                  //           color: _isProcessingEvidence
+                  //               ? AppTheme.warning
+                  //               : AppTheme.error,
+                  //           size: 18,
+                  //         ),
+                  //         const SizedBox(width: 10),
+                  //         Expanded(
+                  //           child: Column(
+                  //             crossAxisAlignment: CrossAxisAlignment.start,
+                  //             mainAxisSize: MainAxisSize.min,
+                  //             children: [
+                  //               Text(
+                  //                 _isProcessingEvidence
+                  //                     ? (_processingStatus ??
+                  //                           context.tr(
+                  //                             'emergency.processing_default',
+                  //                           ))
+                  //                     : _captureStatus,
+                  //                 style: AppTheme.bodyMedium.copyWith(
+                  //                   color: AppTheme.textPrimary.withValues(
+                  //                     alpha: 0.88,
+                  //                   ),
+                  //                 ),
+                  //               ),
+                  //               if (incidentProgressNote != null) ...[
+                  //                 const SizedBox(height: 4),
+                  //                 Text(
+                  //                   incidentProgressNote,
+                  //                   style: AppTheme.bodyMedium.copyWith(
+                  //                     fontSize: 12,
+                  //                     color: AppTheme.textPrimary.withValues(
+                  //                       alpha: 0.72,
+                  //                     ),
+                  //                   ),
+                  //                 ),
+                  //               ],
+                  //             ],
+                  //           ),
+                  //         ),
+                  //         if (_isProcessingEvidence)
+                  //           const SizedBox(
+                  //             width: 16,
+                  //             height: 16,
+                  //             child: CircularProgressIndicator(
+                  //               strokeWidth: 2,
+                  //               color: AppTheme.warning,
+                  //             ),
+                  //           )
+                  //         else
+                  //           Container(
+                  //             width: 8,
+                  //             height: 8,
+                  //             decoration: const BoxDecoration(
+                  //               color: AppTheme.error,
+                  //               shape: BoxShape.circle,
+                  //             ),
+                  //           ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: 20),
+                  // ],
                   AppFloatingSurface(
                     padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
                     borderRadius: 34,
@@ -730,8 +737,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     badgeIcon: (_activeLocationUrl?.trim().isNotEmpty ?? false)
                         ? Icons.gps_fixed_rounded
                         : Icons.share_location_rounded,
-                    badgeLabel:
-                        (_activeLocationUrl?.trim().isNotEmpty ?? false)
+                    badgeLabel: (_activeLocationUrl?.trim().isNotEmpty ?? false)
                         ? 'GPS'
                         : 'SOS',
                     footerIcon: Icons.send_rounded,
@@ -1315,9 +1321,7 @@ class _MapShareTag extends StatelessWidget {
         vertical: compact ? 6 : 8,
       ),
       decoration: BoxDecoration(
-        color: AppTheme.espressoDeep.withValues(
-          alpha: compact ? 0.74 : 0.62,
-        ),
+        color: AppTheme.espressoDeep.withValues(alpha: compact ? 0.74 : 0.62),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppTheme.peonySoft.withValues(alpha: 0.40)),
       ),

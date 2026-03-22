@@ -28,11 +28,13 @@ class EmergencyIncidentResult {
 class EmergencyEvidenceUploadResult {
   final bool success;
   final int uploadedCount;
+  final List<String> evidenceIds;
   final String? message;
 
   const EmergencyEvidenceUploadResult({
     required this.success,
     required this.uploadedCount,
+    this.evidenceIds = const [],
     this.message,
   });
 }
@@ -225,6 +227,7 @@ class EmergencyBackendService {
 
     var uploadedCount = 0;
     final issues = <String>[];
+    final evidenceIds = <String>[];
 
     for (final filePath in attachmentPaths) {
       final file = File(filePath);
@@ -278,6 +281,9 @@ class EmergencyBackendService {
 
         var storedEvidence = createResult.evidence!;
         uploadedCount++;
+        if (storedEvidence.id.trim().isNotEmpty) {
+          evidenceIds.add(storedEvidence.id);
+        }
 
         if (incidentId != null && incidentId.trim().isNotEmpty) {
           final associationResult = await _evidenceService
@@ -325,6 +331,7 @@ class EmergencyBackendService {
     return EmergencyEvidenceUploadResult(
       success: uploadedCount > 0,
       uploadedCount: uploadedCount,
+      evidenceIds: evidenceIds,
       message: _buildUploadMessage(
         uploadedCount: uploadedCount,
         issues: issues,
