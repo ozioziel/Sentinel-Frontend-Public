@@ -19,37 +19,44 @@ class SentinelApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: AppBrandingService.instance,
+      animation: AppLanguageService.instance,
       builder: (context, _) {
         return AnimatedBuilder(
-          animation: AppThemeService.instance,
+          animation: AppBrandingService.instance,
           builder: (context, _) {
-            return MaterialApp(
-              title: AppBrandingService.instance.displayName,
-              debugShowCheckedModeBanner: false,
-              theme: AppThemeService.instance.currentThemeData,
-              navigatorKey: AppNavigator.navigatorKey,
-              scaffoldMessengerKey: _scaffoldMessengerKey,
-              locale: AppLanguageService.instance.materialLocale,
-              supportedLocales: AppLanguageService.supportedMaterialLocales,
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              builder: (context, child) {
-                return OfflineSyncRecoveryScope(
+            return AnimatedBuilder(
+              animation: AppThemeService.instance,
+              builder: (context, _) {
+                return MaterialApp(
+                  title: AppBrandingService.instance.displayName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppThemeService.instance.currentThemeData,
+                  navigatorKey: AppNavigator.navigatorKey,
                   scaffoldMessengerKey: _scaffoldMessengerKey,
-                  child: EmergencyAlertRecoveryScope(
-                    scaffoldMessengerKey: _scaffoldMessengerKey,
-                    child: AppDesignMotion(
-                      child: child ?? const SizedBox.shrink(),
-                    ),
-                  ),
+                  locale: AppLanguageService.instance.materialLocale,
+                  supportedLocales: AppLanguageService.supportedMaterialLocales,
+                  localizationsDelegates: const [
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  builder: (context, child) {
+                    return AppLanguageScope(
+                      child: OfflineSyncRecoveryScope(
+                        scaffoldMessengerKey: _scaffoldMessengerKey,
+                        child: EmergencyAlertRecoveryScope(
+                          scaffoldMessengerKey: _scaffoldMessengerKey,
+                          child: AppDesignMotion(
+                            child: child ?? const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  home: const SessionGateScreen(),
+                  onGenerateRoute: AppRoutes.onGenerateRoute,
                 );
               },
-              home: const SessionGateScreen(),
-              onGenerateRoute: AppRoutes.onGenerateRoute,
             );
           },
         );

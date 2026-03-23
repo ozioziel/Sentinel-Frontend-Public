@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/translated_text.dart';
 import '../../../incidents/domain/models/incident_record.dart';
 import '../../../incidents/presentation/services/incident_service.dart';
 import '../../domain/models/evidence_record.dart';
@@ -381,7 +382,7 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            TranslatedText(
                               _evidence.title,
                               style: AppTheme.headlineMedium,
                             ),
@@ -597,17 +598,20 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppTheme.divider),
               ),
-              child: Text(
-                _evidence.description.trim().isEmpty
-                    ? _t(
+              child: _evidence.description.trim().isEmpty
+                  ? Text(
+                      _t(
                         es: 'No se registro una descripcion para esta evidencia.',
                         en: 'No description was registered for this evidence.',
                         ay: 'Aka evidenciatakix janiw descripcion qillqt\'atakti.',
                         qu: 'Kay evidenciapaq descripcionqa mana qillqasqachu.',
-                      )
-                    : _evidence.description,
-                style: AppTheme.bodyLarge,
-              ),
+                      ),
+                      style: AppTheme.bodyLarge,
+                    )
+                  : TranslatedText(
+                      _evidence.description,
+                      style: AppTheme.bodyLarge,
+                    ),
             ),
             const SizedBox(height: 20),
             Text(

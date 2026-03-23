@@ -6,6 +6,7 @@ import 'contacts_screen.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../services/auth_service.dart';
 import '../services/contacts_service.dart';
+import 'language_selection_screen.dart';
 import 'login_screen.dart';
 
 class SessionGateScreen extends StatefulWidget {
@@ -27,6 +28,10 @@ class _SessionGateScreenState extends State<SessionGateScreen> {
   }
 
   Future<_SessionDestination> _resolveDestination() async {
+    if (!AppLanguageService.instance.isLanguageChosen) {
+      return const _SessionDestination.languageSelection();
+    }
+
     final session = await _authService.getSession();
     if (session == null) {
       return const _SessionDestination.login();
@@ -50,6 +55,11 @@ class _SessionGateScreenState extends State<SessionGateScreen> {
         }
 
         final destination = snapshot.data;
+
+        if (destination?.kind == _SessionDestinationKind.languageSelection) {
+          return const LanguageSelectionScreen(isInitialSetup: true);
+        }
+
         if (destination == null ||
             destination.kind == _SessionDestinationKind.login) {
           return const LoginScreen();
@@ -68,7 +78,7 @@ class _SessionGateScreenState extends State<SessionGateScreen> {
   }
 }
 
-enum _SessionDestinationKind { login, home, initialContacts }
+enum _SessionDestinationKind { login, home, initialContacts, languageSelection }
 
 class _SessionDestination {
   final _SessionDestinationKind kind;
@@ -83,6 +93,9 @@ class _SessionDestination {
 
   const _SessionDestination.initialContacts(String userId)
     : this._(kind: _SessionDestinationKind.initialContacts, userId: userId);
+
+  const _SessionDestination.languageSelection()
+    : this._(kind: _SessionDestinationKind.languageSelection);
 }
 
 class _SessionLoadingView extends StatelessWidget {

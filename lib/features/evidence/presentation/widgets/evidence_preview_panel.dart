@@ -190,6 +190,7 @@ class _VideoPreviewState extends State<_VideoPreview> {
 
   @override
   Widget build(BuildContext context) {
+    AppLanguageScope.watch(context);
     if (_isLoading) {
       return _PreviewLoading(
         label: _t(
@@ -363,6 +364,7 @@ class _AudioPreviewState extends State<_AudioPreview> {
 
   @override
   Widget build(BuildContext context) {
+    AppLanguageScope.watch(context);
     if (_isLoading) {
       return _PreviewLoading(
         label: _t(

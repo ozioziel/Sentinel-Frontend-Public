@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/translated_text.dart';
 import '../../../evidence/presentation/widgets/evidence_components.dart';
 import '../../domain/models/incident_record.dart';
 import '../services/incident_service.dart';
@@ -312,7 +313,7 @@ class _IncidentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(incident.title, style: AppTheme.titleLarge),
+                      TranslatedText(incident.title, style: AppTheme.titleLarge),
                       const SizedBox(height: 4),
                       Text(
                         formatEvidenceDate(incident.occurredAt),
@@ -345,19 +346,25 @@ class _IncidentCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              incident.description.trim().isEmpty
-                  ? AppLanguageService.instance.pick(
-                      es: 'Sin contexto adicional registrado.',
-                      en: 'No additional context recorded.',
-                      ay: 'Janiw yaqha contexto qillqt\'atakti.',
-                      qu: 'Mana yapasqa contexto qillqasqachu.',
-                    )
-                  : incident.description,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: AppTheme.bodyMedium,
-            ),
+            if (incident.description.trim().isEmpty)
+              Text(
+                AppLanguageService.instance.pick(
+                  es: 'Sin contexto adicional registrado.',
+                  en: 'No additional context recorded.',
+                  ay: 'Janiw yaqha contexto qillqt\'atakti.',
+                  qu: 'Mana yapasqa contexto qillqasqachu.',
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.bodyMedium,
+              )
+            else
+              TranslatedText(
+                incident.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.bodyMedium,
+              ),
           ],
         ),
       ),
@@ -379,21 +386,28 @@ class _IncidentTag extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label.trim().isEmpty
-            ? AppLanguageService.instance.pick(
+      child: label.trim().isEmpty
+          ? Text(
+              AppLanguageService.instance.pick(
                 es: 'sin dato',
                 en: 'no data',
                 ay: 'janiw dato utjkiti',
                 qu: 'mana dato kanchu',
-              )
-            : label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+              ),
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : TranslatedText(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
     );
   }
 }

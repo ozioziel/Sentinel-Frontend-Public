@@ -12,6 +12,7 @@ import '../../../auth/presentation/services/auth_service.dart';
 import '../../../auth/presentation/services/contacts_service.dart';
 import '../models/profile_avatar_option.dart';
 import '../widgets/profile_avatar_badge.dart';
+import '../../../auth/presentation/screens/language_selection_screen.dart';
 import 'profile_about_screen.dart';
 import 'profile_appearance_screen.dart';
 
@@ -85,6 +86,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (!mounted) return;
     _loadData();
+  }
+
+  Future<void> _goToLanguage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LanguageSelectionScreen(isInitialSetup: false),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _goToAbout() async {
@@ -320,6 +332,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       subtitle:
                           '${selectedPreset.localizedTitle} | icono ${selectedAvatar.localizedTitle}',
                       onTap: _goToAppearance,
+                    ),
+                    _SettingTile(
+                      icon: Icons.language_rounded,
+                      title: context.tr('profile.language_title'),
+                      subtitle: AppLanguageService.instance.languageLabel(
+                        AppLanguageService.instance.language,
+                      ),
+                      onTap: _goToLanguage,
                     ),
                     _SettingTile(
                       icon: Icons.info_outline,

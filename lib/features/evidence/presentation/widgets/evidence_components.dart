@@ -4,6 +4,7 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/translated_text.dart';
 import '../../domain/models/evidence_record.dart';
 
 class EvidenceTypeStyle {
@@ -328,7 +329,7 @@ class EvidenceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
+                      child: TranslatedText(
                         evidence.title,
                         style: AppTheme.titleLarge.copyWith(
                           fontSize: compact ? 16 : 18,
@@ -357,7 +358,7 @@ class EvidenceCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Text(
+                TranslatedText(
                   preview,
                   style: AppTheme.bodyMedium.copyWith(fontSize: 13),
                   maxLines: compact ? 2 : 3,

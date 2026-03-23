@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_card.dart';
+import '../../../../shared/widgets/translated_text.dart';
 
 class DirectoryScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -602,9 +603,9 @@ class _CenterCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(center.name, style: AppTheme.labelLarge),
+                    TranslatedText(center.name, style: AppTheme.labelLarge),
                     const SizedBox(height: 3),
-                    Text(
+                    TranslatedText(
                       center.type,
                       style: AppTheme.bodyMedium.copyWith(fontSize: 12),
                     ),
@@ -621,7 +622,7 @@ class _CenterCard extends StatelessWidget {
                           .withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: TranslatedText(
                   center.isOpen ? 'Abierto' : 'Cerrado',
                   style: TextStyle(
                     color: center.isOpen
@@ -646,7 +647,7 @@ class _CenterCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(
+                child: TranslatedText(
                   center.address,
                   style: AppTheme.bodyMedium.copyWith(fontSize: 12),
                 ),

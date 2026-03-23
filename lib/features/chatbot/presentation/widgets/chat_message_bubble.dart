@@ -118,6 +118,7 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
+    AppLanguageScope.watch(context);
     if (widget.isUser) return _UserBubble(text: widget.text);
 
     final isTalking = widget.isTyping || _isTypewriting;

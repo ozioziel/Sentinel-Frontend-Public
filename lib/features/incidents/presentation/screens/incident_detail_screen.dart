@@ -4,6 +4,7 @@ import '../../../../core/localization/app_language_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/translated_text.dart';
 import '../../../auth/presentation/services/auth_service.dart';
 import '../../../evidence/domain/models/evidence_record.dart';
 import '../../../evidence/presentation/screens/evidence_detail_screen.dart';
@@ -551,7 +552,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              TranslatedText(
                                 _incident.title,
                                 style: AppTheme.headlineMedium,
                               ),
@@ -596,7 +597,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
+                            child: TranslatedText(
                               _incident.location,
                               style: AppTheme.bodyMedium,
                             ),
@@ -605,21 +606,21 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                       ),
                     ],
                     const SizedBox(height: 14),
-                    Text(
-                      _incident.description.trim().isEmpty
-                          ? _t(
-                              es:
-                                  'Todavia no hay contexto adicional registrado para este incidente.',
-                              en:
-                                  'There is still no additional context recorded for this incident.',
-                              ay:
-                                  'Aka incidentetakejj janiw yaqha contexto qillqt\'atakiti.',
-                              qu:
-                                  'Kay incidentepaqqa manaraq yapasqa contexto qillqasqachu.',
-                            )
-                          : _incident.description,
-                      style: AppTheme.bodyLarge,
-                    ),
+                    if (_incident.description.trim().isEmpty)
+                      Text(
+                        _t(
+                          es: 'Todavia no hay contexto adicional registrado para este incidente.',
+                          en: 'There is still no additional context recorded for this incident.',
+                          ay: 'Aka incidentetakejj janiw yaqha contexto qillqt\'atakiti.',
+                          qu: 'Kay incidentepaqqa manaraq yapasqa contexto qillqasqachu.',
+                        ),
+                        style: AppTheme.bodyLarge,
+                      )
+                    else
+                      TranslatedText(
+                        _incident.description,
+                        style: AppTheme.bodyLarge,
+                      ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
@@ -1437,14 +1438,19 @@ class _IncidentChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label.trim().isEmpty ? 'sin dato' : label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: label.trim().isEmpty
+          ? Text(
+              AppLanguageService.instance.pick(
+                es: 'sin dato',
+                ay: 'janiw dato utjkiti',
+                qu: 'mana dato kanchu',
+              ),
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+            )
+          : TranslatedText(
+              label,
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+            ),
     );
   }
 }
