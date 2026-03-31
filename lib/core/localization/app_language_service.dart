@@ -2,19 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppLanguage {
-  aymara(
-    code: 'ay',
-    labelKey: 'languages.aymara',
-    chatbotName: 'Aymara',
-  ),
-  quechua(
-    code: 'qu',
-    labelKey: 'languages.quechua',
-    chatbotName: 'Quechua',
-  ),
   spanish(
     code: 'es',
     labelKey: 'languages.spanish',
@@ -30,13 +19,6 @@ enum AppLanguage {
     required this.labelKey,
     required this.chatbotName,
   });
-
-  static AppLanguage fromCode(String? value) {
-    for (final lang in AppLanguage.values) {
-      if (lang.code == value) return lang;
-    }
-    return AppLanguage.spanish;
-  }
 }
 
 class AppLanguageService extends ChangeNotifier {
@@ -44,48 +26,17 @@ class AppLanguageService extends ChangeNotifier {
 
   static final AppLanguageService instance = AppLanguageService._();
   static const String _assetPathPrefix = 'assets/i18n';
-  static const String _langPrefKey = 'app_language';
-  // ay and qu are not supported by GlobalMaterialLocalizations, so we always
-  // pass Spanish to MaterialApp. App-level text is handled by tr() / pick().
   static const List<Locale> supportedMaterialLocales = [Locale('es', 'BO')];
   static const Locale _materialLocale = Locale('es', 'BO');
 
-  AppLanguage _language = AppLanguage.aymara;
-  bool _isLanguageChosen = false;
+  final AppLanguage _language = AppLanguage.spanish;
   Map<String, dynamic> _translations = <String, dynamic>{};
-  Map<String, dynamic> _fallbackTranslations = <String, dynamic>{};
 
   AppLanguage get language => _language;
   Locale get materialLocale => _materialLocale;
-  bool get isLanguageChosen => _isLanguageChosen;
 
   Future<void> initialize() async {
-    _fallbackTranslations = await _loadTranslations(AppLanguage.spanish);
-
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_langPrefKey);
-    if (saved != null) {
-      _language = AppLanguage.fromCode(saved);
-      _translations = await _loadTranslations(_language);
-      _isLanguageChosen = true;
-    } else {
-      _language = AppLanguage.aymara;
-      _translations = _fallbackTranslations;
-      _isLanguageChosen = false;
-    }
-  }
-
-  Future<void> setLanguage(AppLanguage language) async {
-    _language = language;
-    _translations = await _loadTranslations(language);
-    _isLanguageChosen = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_langPrefKey, language.code);
-    notifyListeners();
-  }
-
-  String languageLabel(AppLanguage language) {
-    return tr(language.labelKey);
+    _translations = await _loadTranslations();
   }
 
   String pick({
@@ -94,14 +45,7 @@ class AppLanguageService extends ChangeNotifier {
     String? ay,
     String? qu,
   }) {
-    switch (_language) {
-      case AppLanguage.aymara:
-        return ay ?? es;
-      case AppLanguage.quechua:
-        return qu ?? es;
-      case AppLanguage.spanish:
-        return es;
-    }
+    return es;
   }
 
   String tr(
@@ -111,7 +55,6 @@ class AppLanguageService extends ChangeNotifier {
   }) {
     final value =
         _lookupValue(_translations, key) ??
-        _lookupValue(_fallbackTranslations, key) ??
         fallback ??
         key;
 
@@ -122,11 +65,9 @@ class AppLanguageService extends ChangeNotifier {
     return _replaceParams(value, params);
   }
 
-  Future<Map<String, dynamic>> _loadTranslations(AppLanguage language) async {
+  Future<Map<String, dynamic>> _loadTranslations() async {
     try {
-      final raw = await rootBundle.loadString(
-        '$_assetPathPrefix/${language.code}.json',
-      );
+      final raw = await rootBundle.loadString('$_assetPathPrefix/es.json');
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
         return decoded;
@@ -134,11 +75,8 @@ class AppLanguageService extends ChangeNotifier {
       if (decoded is Map) {
         return Map<String, dynamic>.from(decoded);
       }
-    } catch (_) {
-      // Fall back to the bundled Spanish copy.
-    }
-
-    return _fallbackTranslations;
+    } catch (_) {}
+    return <String, dynamic>{};
   }
 
   dynamic _lookupValue(Map<String, dynamic> source, String key) {
@@ -198,8 +136,6 @@ extension AppLanguageBuildContext on BuildContext {
     );
   }
 
-  /// Reactive version of [AppLanguageService.pick] — registers this widget as
-  /// a dependent so it rebuilds automatically on language change.
   String pick({
     required String es,
     String? en,
